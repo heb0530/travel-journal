@@ -347,7 +347,7 @@
   </style>
 </head>
 <body>
-<div id="app">
+<div id="app" style="display:none">
 
   <!-- ① 로그인 화면 -->
   <div class="login-screen" v-if="view==='login'">
@@ -2340,6 +2340,7 @@ createApp({
     }
   }
 }).mount('#app')
+document.getElementById('app').style.display=''
 </script>
 </body>
 </html>
