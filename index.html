@@ -354,6 +354,10 @@
     <div class="login-box">
       <h1>여행 일지</h1>
       <p class="login-sub">여행의 모든 순간을 지도 위에 기록하세요</p>
+      <div v-if="isInAppBrowser" style="background:#FFF3E0;border-radius:8px;padding:16px;margin-bottom:20px;font-size:.85rem;line-height:1.6;color:#e65100">
+        카카오톡/인앱 브라우저에서는 Google 로그인이 제한됩니다.<br>
+        <strong>우측 상단 ⋮ → "기본 브라우저로 열기"</strong>를 눌러주세요.
+      </div>
       <button class="btn-google" @click="signInWithGoogle">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
         Google로 로그인
@@ -1079,6 +1083,7 @@ createApp({
     const apiKeyInput = ref('')
     const currentUser = ref(null)
     const showUserMenu = ref(false)
+    const isInAppBrowser = ref(/KAKAOTALK|NAVER|Instagram|FB_IAB|FBAN|Line/i.test(navigator.userAgent))
 
     // ── Auth ──────────────────────────────────────
     async function signInWithGoogle() {
@@ -2313,7 +2318,7 @@ createApp({
     }
 
     return {
-      view,currentUser,showUserMenu,signInWithGoogle,signOut,
+      view,currentUser,showUserMenu,isInAppBrowser,signInWithGoogle,signOut,
       showMigrateModal,migrateStep,migratePercent,migrateStatus,migrateResult,
       localTripCount,localBundleCount,skipMigration,startMigration,finishMigration,
       apiKeyInput,saveApiKey,
