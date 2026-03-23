@@ -1642,7 +1642,7 @@ createApp({
       const inp=document.getElementById('new-trip-dest-input'); if (!inp) return
       destAC=new google.maps.places.Autocomplete(inp,{types:['(regions)']})
       destAC.addListener('place_changed',()=>{
-        const place=destAC.getPlace(); if (!place.geometry) return
+        const place=destAC.getPlace(); if (!place||!place.geometry) return
         const comps=place.address_components||[]
         const cc=comps.find(c=>c.types.includes('country'))
         const loc=comps.find(c=>c.types.includes('locality')||c.types.includes('administrative_area_level_1'))
@@ -1755,7 +1755,7 @@ createApp({
       })
     }
     async function addPoiAsPin(place,type) {
-      const trip=currentTrip.value; if (!trip) return
+      const trip=currentTrip.value; if (!trip||!place?.geometry) return
       const types=place.types||[]
       const catMap={restaurant:'식당',lodging:'숙소',tourist_attraction:'관광지',museum:'박물관',park:'공원',shopping_mall:'쇼핑',airport:'공항',transit_station:'교통'}
       const category=catMap[types.find(t=>catMap[t])]||'기타'
@@ -1950,7 +1950,7 @@ createApp({
       map.fitBounds(bounds,{top:80,bottom:40,left:40,right:40})
     }
     async function addPinFromPlace(place) {
-      if (!place.geometry||!currentTrip.value) return
+      if (!place||!place.geometry||!currentTrip.value) return
       const trip=currentTrip.value
       const types=place.types||[]
       const catMap={restaurant:'식당',lodging:'숙소',tourist_attraction:'관광지',museum:'박물관',park:'공원',shopping_mall:'쇼핑',airport:'공항',transit_station:'교통'}
