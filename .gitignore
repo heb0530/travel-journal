@@ -1,0 +1,5 @@
+docs/
+*.csv
+*.json
+!package.json
+.bkit/

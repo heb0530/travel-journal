@@ -1,0 +1,2345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>여행 일지</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/marked@12/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #fafaf7;
+      --surface: #fff;
+      --ink: #1a1917;
+      --ink-2: #4a4a45;
+      --muted: #9a9a92;
+      --border: #e8e8e0;
+      --text: #1a1917;
+    }
+    body { font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; overflow-x:hidden; }
+
+    /* ── 로그인 ── */
+    .login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); }
+    .login-box { text-align:center; max-width:380px; width:90%; }
+    .login-box h1 { font-family:Georgia,serif; font-size:2.2rem; font-weight:400; margin-bottom:6px; }
+    .login-box .login-sub { color:var(--muted); font-size:.9rem; margin-bottom:36px; line-height:1.6; }
+    .btn-google { display:inline-flex; align-items:center; gap:10px; padding:12px 28px; border:1.5px solid var(--border); border-radius:8px; background:#fff; font-size:.95rem; font-weight:600; cursor:pointer; transition:all .15s; }
+    .btn-google:hover { border-color:var(--ink); background:#fafafa; }
+    .btn-google img { width:20px; height:20px; }
+    .user-menu { position:relative; }
+    .user-btn { display:flex; align-items:center; gap:8px; padding:5px 12px; border:1px solid var(--border); border-radius:20px; background:#fff; cursor:pointer; font-size:.82rem; }
+    .user-btn:hover { border-color:var(--ink); }
+    .user-btn img { width:24px; height:24px; border-radius:50%; }
+    .user-dropdown { position:absolute; right:0; top:38px; background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.1); min-width:140px; z-index:100; overflow:hidden; }
+    .user-dropdown button { display:block; width:100%; padding:10px 16px; border:none; background:none; text-align:left; font-size:.85rem; cursor:pointer; }
+    .user-dropdown button:hover { background:#f5f5f5; }
+    .migrate-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:200; }
+    .migrate-box { background:#fff; border-radius:12px; padding:32px; max-width:420px; width:90%; text-align:center; }
+    .migrate-box h3 { font-family:Georgia,serif; font-size:1.2rem; margin-bottom:12px; font-weight:400; }
+    .migrate-box p { color:var(--ink-2); font-size:.88rem; margin-bottom:8px; line-height:1.6; }
+    .migrate-progress { width:100%; height:8px; background:#eee; border-radius:4px; margin:16px 0; overflow:hidden; }
+    .migrate-progress-bar { height:100%; background:var(--ink); border-radius:4px; transition:width .3s; }
+
+    /* ── 설정 ── */
+    .setup-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:linear-gradient(135deg,#1a1917,#2c2c28); }
+    .setup-box { background:#fff; border-radius:12px; padding:40px; max-width:500px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+    .setup-box h2 { font-family:Georgia,serif; font-size:1.5rem; margin-bottom:6px; font-weight:400; }
+    .setup-box > p { color:var(--muted); font-size:.88rem; margin-bottom:24px; line-height:1.6; }
+    .setup-section { margin-bottom:20px; }
+    .setup-section-title { font-size:.82rem; font-weight:700; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+    .required-badge { background:#EA4335; color:#fff; font-size:.65rem; padding:1px 6px; border-radius:8px; }
+    .optional-badge { background:#34A853; color:#fff; font-size:.65rem; padding:1px 6px; border-radius:8px; }
+    .setup-input { width:100%; padding:11px 14px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:.9rem; margin-bottom:8px; }
+    .setup-input:focus { outline:none; border-color:var(--ink); }
+    .setup-hint { font-size:.78rem; color:var(--muted); line-height:1.7; }
+    .setup-hint a { color:var(--ink); }
+    .setup-divider { border:none; border-top:1px dashed #e0e0e0; margin:20px 0; }
+
+    /* ── 버튼 ── */
+    .btn { padding:9px 18px; border:none; border-radius:6px; font-size:.88rem; font-weight:600; cursor:pointer; transition:all .15s; white-space:nowrap; }
+    .btn:active { transform:scale(.97); }
+    .btn-primary { background:var(--ink); color:#fff; width:100%; padding:12px; font-size:.95rem; }
+    .btn-primary:hover { background:#333; }
+    .btn-sm { padding:6px 14px; font-size:.82rem; }
+    .btn-cancel { background:#f0f0f0; color:var(--text); }
+    .btn-cancel:hover { background:#e0e0e0; }
+    .btn-save { background:var(--ink); color:#fff; }
+    .btn-save:hover { background:#333; }
+    .btn-danger { background:#ea4335; color:#fff; }
+
+    /* ── 에디토리얼 메인 ── */
+    .main-topbar { display:flex; align-items:center; justify-content:space-between; padding:0 48px; height:64px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:50; }
+    .main-logo { font-family:Georgia,'Times New Roman',serif; font-size:1.3rem; font-weight:400; color:var(--ink); letter-spacing:.02em; }
+    .main-topbar-right { display:flex; align-items:center; gap:12px; }
+    .login-btn { background:none; color:var(--ink); border:1.5px solid var(--border); border-radius:20px; padding:6px 16px; font-size:.82rem; font-weight:600; cursor:pointer; transition:all .15s; }
+    .login-btn:hover { background:var(--bg); border-color:var(--ink); }
+
+    /* hero */
+    @keyframes heroFadeUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes heroDivGrow { from { width:0; } to { width:48px; } }
+    @keyframes lilacBreathe {
+      0%,100% { opacity:.35; }
+      50% { opacity:.55; }
+    }
+    .main-page { min-height:100vh; background:var(--bg); position:relative; }
+    /* 페이지 전체 우상단에서 좌하단으로 넓게 퍼지는 라일락 빛 */
+    .main-page::before { content:''; position:fixed; top:-200px; right:-200px; width:900px; height:900px; background:radial-gradient(ellipse at center,rgba(205,185,225,.4) 0%,rgba(200,180,220,.2) 25%,rgba(195,175,215,.08) 50%,transparent 70%); border-radius:50%; pointer-events:none; animation:lilacBreathe 22s ease-in-out infinite; z-index:0; }
+    .main-page::after { content:''; position:fixed; top:-100px; right:100px; width:600px; height:600px; background:radial-gradient(ellipse at center,rgba(215,195,235,.25) 0%,rgba(210,190,230,.1) 35%,transparent 65%); border-radius:50%; pointer-events:none; animation:lilacBreathe 30s ease-in-out infinite; z-index:0; }
+    .main-hero { padding:100px 48px 0; max-width:1200px; margin:0 auto; position:relative; }
+    .main-hero-light { display:none; }
+    .main-hero-ray3 { display:none; }
+    .main-hero-kicker { font-size:.72rem; text-transform:uppercase; letter-spacing:.15em; color:var(--muted); margin-bottom:16px; animation:heroFadeUp .8s ease-out both; position:relative; z-index:1; }
+    .main-hero-title { font-family:Georgia,'Times New Roman',serif; font-size:3.6rem; font-weight:400; color:var(--ink); line-height:1.1; letter-spacing:-.03em; animation:heroFadeUp .8s ease-out .15s both; position:relative; z-index:1; }
+    .main-hero-divider { width:48px; height:2px; background:var(--ink); margin:40px 0; animation:heroDivGrow .6s ease-out .5s both; position:relative; z-index:1; }
+
+    /* trip cards */
+    .trips-section { max-width:1200px; margin:0 auto; padding:0 48px 80px; }
+    .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+    .section-title { font-family:Georgia,serif; font-size:1rem; font-weight:400; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+    .trips-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; }
+    .trip-card-wrap { position:relative; }
+    .trip-card { background:var(--surface); border-radius:4px; overflow:hidden; cursor:pointer; transition:transform .25s ease,box-shadow .25s ease; border:1px solid var(--border); }
+    .trip-card:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,.1); }
+    .trip-card-img { width:100%; height:180px; object-fit:cover; display:block; }
+    .trip-card-img-placeholder { width:100%; height:180px; display:flex; align-items:center; justify-content:center; font-size:3rem; }
+    .trip-card-body { padding:16px 20px 20px; }
+    .trip-card-dest { font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:6px; }
+    .trip-card-name { font-family:Georgia,serif; font-size:1.1rem; font-weight:400; color:var(--ink); margin-bottom:8px; line-height:1.3; }
+    .trip-card-meta { font-size:.75rem; color:var(--muted); }
+    .trip-card-edit { position:absolute; top:10px; right:10px; background:rgba(255,255,255,.95); border:none; border-radius:6px; padding:5px 10px; font-size:.72rem; cursor:pointer; opacity:0; transition:opacity .2s; box-shadow:0 2px 8px rgba(0,0,0,.12); }
+    .trip-card-wrap:hover .trip-card-edit { opacity:1; }
+    .trip-card-new { border:2px dashed var(--border); cursor:pointer; border-radius:4px; transition:all .2s; }
+    .trip-card-new:hover { border-color:var(--ink); }
+    .trip-card-new-inner { height:260px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--muted); }
+    .trip-card-new-icon { font-size:1.8rem; }
+    .trip-card-new-text { font-size:.82rem; }
+
+    /* editorial feed */
+    .editorial-feed { max-width:1200px; margin:0 auto; padding:0 48px 120px; }
+    .feed-header { display:flex; align-items:center; gap:24px; margin-bottom:56px; padding-top:40px; border-top:1px solid var(--border); }
+    .feed-header-title { font-family:Georgia,serif; font-size:1rem; font-weight:400; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; white-space:nowrap; }
+    .feed-entry { display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:start; padding:56px 0; border-bottom:1px solid var(--border); }
+    .feed-entry:last-child { border-bottom:none; }
+    .feed-entry.expanded { display:block; }
+    .feed-entry.expanded .feed-entry-text { display:block; }
+    .feed-entry.expanded .feed-entry-title { margin-bottom:24px; }
+    .feed-entry.expanded .feed-entry-media { float:left; width:42%; margin:0 32px 16px 0; }
+    .feed-entry.expanded .feed-entry-media.float-right { float:right; margin:0 0 16px 32px; }
+    .feed-entry.expanded .feed-entry-body { white-space:pre-line; }
+    .feed-entry.expanded::after { content:''; display:table; clear:both; }
+    .feed-entry-placeholder { width:100%; aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; font-size:4rem; border-radius:2px; }
+    .feed-entry-text { display:flex; flex-direction:column; justify-content:flex-start; }
+    .feed-entry-kicker { font-size:.7rem; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-bottom:16px; }
+    .feed-entry-title { font-family:Georgia,serif; font-size:2rem; font-weight:400; color:var(--ink); line-height:1.2; margin-bottom:16px; }
+    .feed-entry-body { font-size:.9rem; color:var(--ink-2); line-height:1.85; margin-bottom:12px; white-space:pre-line; }
+    .feed-entry-body.collapsed { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+    .feed-entry-actions { display:flex; align-items:center; gap:16px; margin-top:8px; }
+    .feed-entry-toggle { font-size:.78rem; color:var(--muted); cursor:pointer; background:none; border:none; font-family:inherit; transition:color .15s; padding:0; }
+    .feed-entry-toggle:hover { color:var(--ink); }
+    .feed-entry-cta { font-size:.82rem; font-weight:600; color:var(--ink); cursor:pointer; border-bottom:1.5px solid var(--ink); padding-bottom:2px; display:inline-block; transition:opacity .15s; background:none; border-left:none; border-top:none; border-right:none; font-family:inherit; }
+    .feed-entry-cta:hover { opacity:.5; }
+    .feed-empty { text-align:center; padding:80px 0; color:var(--muted); font-size:.88rem; line-height:2; }
+
+    /* feed carousel */
+    .feed-carousel { position:relative; border-radius:2px; overflow:hidden; }
+    .feed-carousel-img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; }
+    .feed-carousel-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,.88); border:none; width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:.85rem; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,.15); transition:all .15s; z-index:2; color:var(--ink); }
+    .feed-carousel-btn:hover { background:#fff; box-shadow:0 4px 16px rgba(0,0,0,.2); }
+    .feed-carousel-prev { left:10px; }
+    .feed-carousel-next { right:10px; }
+    .feed-carousel-dots { display:flex; justify-content:center; gap:5px; padding:10px 0 0; }
+    .feed-carousel-dot { width:6px; height:6px; border-radius:50%; background:var(--border); border:none; padding:0; cursor:pointer; transition:background .15s; }
+    .feed-carousel-dot.active { background:var(--ink); }
+
+    /* ── 모달 ── */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:300; align-items:center; justify-content:center; padding:16px; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:#fff; border-radius:12px; width:100%; max-width:460px; padding:28px; box-shadow:0 20px 60px rgba(0,0,0,.25); max-height:90vh; overflow-y:auto; }
+    .modal-title { font-size:1.1rem; font-weight:700; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; }
+    .modal-close { background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--muted); padding:4px 8px; border-radius:6px; }
+    .modal-close:hover { background:#f0f0f0; }
+    .form-group { margin-bottom:14px; }
+    .form-label { font-size:.82rem; font-weight:600; color:var(--muted); margin-bottom:5px; display:block; }
+    .form-input { width:100%; padding:9px 12px; border:1.5px solid #e0e0e0; border-radius:8px; font-size:.9rem; font-family:inherit; }
+    .form-input:focus { outline:none; border-color:var(--ink); }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .form-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
+    .dest-selected { display:flex; align-items:center; gap:10px; background:#f0f5f0; border-radius:8px; padding:10px 14px; margin-top:8px; border:1.5px solid #c0d8c0; }
+    .dest-flag { font-size:1.8rem; line-height:1; }
+    .dest-info { flex:1; min-width:0; }
+    .dest-name { font-size:.88rem; font-weight:700; }
+    .dest-addr { font-size:.75rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .dest-coords { font-size:.7rem; color:#4CAF50; margin-top:2px; }
+
+
+    /* ── 디테일 페이지 ── */
+    .detail-page { display:flex; flex-direction:column; height:100vh; background:var(--bg); }
+    .detail-topbar { background:var(--surface); padding:0 24px; display:flex; align-items:center; gap:16px; height:60px; border-bottom:1px solid var(--border); z-index:10; flex-shrink:0; }
+    .detail-topbar-title { font-family:Georgia,serif; font-size:1.05rem; font-weight:400; color:var(--ink); }
+    .detail-topbar-dest { font-size:.75rem; color:var(--muted); letter-spacing:.02em; }
+    .back-btn { background:none; border:1.5px solid var(--border); border-radius:6px; padding:6px 14px; font-size:.82rem; cursor:pointer; color:var(--ink); transition:all .15s; }
+    .back-btn:hover { background:var(--bg); border-color:var(--ink); }
+    .detail-tabs-bar { display:flex; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0; padding:0 24px; }
+    .detail-tab-btn { padding:14px 20px; font-size:.85rem; font-weight:600; color:var(--muted); cursor:pointer; border:none; border-bottom:2px solid transparent; background:none; transition:all .15s; font-family:Georgia,serif; letter-spacing:.02em; }
+    .detail-tab-btn.active { color:var(--ink); border-bottom-color:var(--ink); }
+    .detail-tab-btn:hover { color:var(--ink); }
+    .detail-body { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+
+    /* ── 지도 영역 ── */
+    .map-body { flex:1; display:flex; overflow:hidden; }
+    .map-wrapper { flex:1; position:relative; overflow:hidden; }
+    #map-canvas { position:absolute; inset:0; }
+    .map-search-overlay { position:absolute; top:12px; left:12px; z-index:100; display:flex; align-items:center; gap:8px; }
+    .search-box { background:#fff; border-radius:24px; box-shadow:0 2px 16px rgba(0,0,0,.2); display:flex; align-items:center; padding:0 16px; width:320px; }
+    .search-input { flex:1; border:none; outline:none; padding:12px 8px; font-size:.88rem; background:transparent; }
+    .search-icon { color:#666; font-size:1rem; }
+    .pin-type-btns { display:flex; gap:6px; }
+    .pin-type-btn { padding:7px 18px; border-radius:20px; font-size:.8rem; font-weight:700; cursor:pointer; border:2px solid transparent; transition:all .15s; box-shadow:0 1px 6px rgba(0,0,0,.12); }
+    .pin-type-btn.wish { background:#EEF2FF; color:#4f46e5; border-color:#c7d2fe; }
+    .pin-type-btn.confirmed { background:#FFF7ED; color:#c2410c; border-color:#fed7aa; }
+    .pin-type-btn.active-wish { background:#4f46e5; color:#fff; border-color:#4f46e5; }
+    .pin-type-btn.active-confirmed { background:#c2410c; color:#fff; border-color:#c2410c; }
+
+    /* 사이드 패널 */
+    .side-panel { width:300px; min-width:220px; max-width:500px; background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; position:relative; }
+    .side-resize-handle { position:absolute; top:0; left:-4px; width:8px; height:100%; cursor:col-resize; z-index:5; }
+    .side-resize-handle:hover { background:rgba(0,0,0,.06); }
+    .side-resize-handle:active { background:rgba(0,0,0,.1); }
+    .side-tabs { display:flex; border-bottom:1px solid var(--border); background:var(--surface); }
+    .side-tab { flex:1; padding:11px 4px; font-size:.75rem; font-weight:600; text-align:center; cursor:pointer; color:var(--muted); border-bottom:2px solid transparent; transition:all .15s; font-family:Georgia,serif; letter-spacing:.02em; }
+    .side-tab.active { color:var(--ink); border-bottom-color:var(--ink); }
+    .side-content { flex:1; overflow-y:auto; padding:12px; }
+    .day-section { margin-bottom:16px; }
+    .day-header { display:flex; align-items:center; gap:6px; margin-bottom:8px; padding:6px 8px; border-radius:8px; }
+    .day-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .day-label { font-size:.8rem; font-weight:700; flex:1; font-family:Georgia,serif; }
+    .day-date-label { font-size:.72rem; color:var(--muted); }
+    .day-del-btn { background:none; border:none; color:#ccc; cursor:pointer; font-size:.8rem; padding:2px 5px; border-radius:4px; }
+    .day-del-btn:hover { color:#ea4335; background:#fce8e6; }
+    .schedule-item { display:flex; align-items:flex-start; gap:8px; padding:7px 10px; border-radius:8px; margin-bottom:4px; cursor:grab; transition:background .15s,border-color .15s,opacity .2s; border:1.5px solid transparent; user-select:none; }
+    .schedule-item:active { cursor:grabbing; }
+    .schedule-item:hover { background:#f5f7ff; border-color:#e0e7ff; }
+    .schedule-item.done-item { opacity:.55; }
+    .schedule-item.dragging { opacity:.25; background:#f0f0f0 !important; border-color:transparent !important; }
+    .schedule-item.drag-over { border-color:var(--ink) !important; background:#f0f0f0 !important; }
+    .day-drop-zone { transition:background .15s; }
+    .day-drop-zone.drag-active { background:rgba(0,0,0,.04) !important; }
+    .schedule-order { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.68rem; font-weight:700; color:#fff; flex-shrink:0; margin-top:1px; }
+    .schedule-name { font-size:.83rem; font-weight:600; line-height:1.3; font-family:Georgia,serif,'Apple SD Gothic Neo',sans-serif; }
+    .schedule-time { font-size:.72rem; color:var(--muted); }
+    .wish-item { padding:7px 10px; border-radius:8px; margin-bottom:4px; display:flex; align-items:center; gap:8px; cursor:pointer; }
+    .wish-item:hover { background:var(--bg); }
+    .stars { color:#FBBC04; font-size:.8rem; }
+    .datetime-row { display:flex; gap:8px; align-items:center; }
+    .date-chip { background:#f0f0f0; color:var(--ink); border-radius:8px; padding:8px 12px; font-size:.85rem; font-weight:600; white-space:nowrap; }
+    .time-input { flex:1; }
+
+    /* Day 색상 패널 */
+    .color-panel { border-top:1px solid var(--border); flex-shrink:0; }
+    .color-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; cursor:pointer; user-select:none; transition:background .15s; }
+    .color-panel-header:hover { background:var(--bg); }
+    .color-panel-title { font-size:.75rem; font-weight:700; color:var(--muted); }
+    .color-panel-arrow { font-size:1.1rem; color:var(--muted); transform:rotate(90deg); transition:transform .2s; display:inline-block; }
+    .color-panel-arrow.open { transform:rotate(-90deg); }
+    .color-panel-body { padding:4px 12px 10px; display:flex; flex-direction:column; gap:6px; }
+    .color-row { display:flex; align-items:center; gap:8px; }
+    .color-swatch { width:16px; height:16px; border-radius:4px; flex-shrink:0; }
+    .color-label { font-size:.78rem; color:var(--text); flex:1; }
+    .color-input { width:26px; height:22px; border:1.5px solid #e0e0e0; border-radius:5px; cursor:pointer; padding:1px; background:none; flex-shrink:0; }
+
+    /* ── 여행일기 탭 ── */
+    .journal-tab { flex:1; overflow-y:auto; background:var(--bg); }
+    .journal-inner { max-width:1100px; margin:0 auto; padding:40px 48px; }
+    .journal-day { margin-bottom:56px; }
+    .journal-day-header { display:flex; align-items:center; gap:20px; margin-bottom:24px; }
+    .journal-day-num { font-family:Georgia,serif; font-size:1.5rem; font-weight:400; color:var(--ink); }
+    .journal-day-date { font-size:.82rem; color:var(--muted); }
+    .journal-day-divider { flex:1; height:1px; background:var(--border); }
+    .journal-pins-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+    .journal-pin-chip { display:inline-flex; align-items:center; gap:5px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:4px 10px; font-size:.75rem; color:var(--ink-2); }
+    /* journal edit mode */
+    .journal-textarea { width:100%; min-height:120px; padding:16px; border:1.5px solid var(--border); border-radius:4px; font-family:inherit; font-size:.92rem; line-height:1.85; color:var(--ink); background:var(--surface); resize:vertical; transition:border-color .15s; }
+    .journal-textarea:focus { outline:none; border-color:var(--ink); }
+    .journal-textarea::placeholder { color:#c0c0b8; }
+    .journal-photos-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; margin-top:16px; max-width:900px; }
+    .journal-photo { position:relative; aspect-ratio:1; border-radius:4px; overflow:hidden; }
+    .journal-photo img { width:100%; height:100%; object-fit:cover; display:block; }
+    .journal-photo-del { position:absolute; top:5px; right:5px; background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:.7rem; cursor:pointer; opacity:0; transition:opacity .15s; display:flex; align-items:center; justify-content:center; }
+    .journal-photo:hover .journal-photo-del { opacity:1; }
+    .journal-photo-thumb { position:absolute; bottom:5px; left:5px; background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:4px; padding:2px 8px; font-size:.62rem; font-weight:700; cursor:pointer; opacity:0; transition:opacity .15s; letter-spacing:.3px; }
+    .journal-photo:hover .journal-photo-thumb { opacity:1; }
+    .journal-photo.is-thumbnail { outline:3px solid var(--ink); outline-offset:-3px; }
+    .journal-photo.is-thumbnail .journal-photo-thumb { opacity:1; background:var(--ink); }
+    .journal-add-photo-btn { display:inline-flex; align-items:center; gap:8px; margin-top:12px; padding:9px 16px; background:none; border:1.5px dashed var(--border); border-radius:4px; font-size:.82rem; color:var(--muted); cursor:pointer; transition:all .15s; font-family:inherit; }
+    .journal-add-photo-btn:hover { border-color:var(--ink); color:var(--ink); }
+    .journal-edit-actions { display:flex; gap:8px; margin-top:16px; }
+
+    /* journal view mode (blog style) */
+    .journal-view-text { font-size:.95rem; color:var(--ink); line-height:2; margin-bottom:24px; font-family:Georgia,serif,'Apple SD Gothic Neo',sans-serif; max-width:100%; }
+    .journal-view-text h1 { font-size:1.3rem; font-weight:400; margin:28px 0 12px; line-height:1.3; }
+    .journal-view-text h2 { font-size:1.1rem; font-weight:400; margin:24px 0 10px; line-height:1.3; }
+    .journal-view-text h3 { font-size:1rem; font-weight:600; margin:20px 0 8px; line-height:1.4; }
+    .journal-view-text p { margin:0 0 12px; }
+    .journal-view-text strong { font-weight:700; }
+    .journal-view-text em { font-style:italic; }
+    .journal-view-text ul,.journal-view-text ol { margin:0 0 12px; padding-left:24px; }
+    .journal-view-text li { margin-bottom:4px; }
+    .journal-view-text blockquote { border-left:3px solid var(--border); padding:4px 0 4px 16px; margin:12px 0; color:var(--ink-2); font-style:italic; }
+    .journal-view-text hr { border:none; border-top:1px solid var(--border); margin:24px 0; }
+    .journal-view-text code { background:#f0ede8; padding:2px 6px; border-radius:3px; font-size:.85em; font-family:'SF Mono',Consolas,monospace; }
+    .journal-view-text pre { background:#f0ede8; padding:14px 16px; border-radius:4px; overflow-x:auto; margin:12px 0; }
+    .journal-view-text pre code { background:none; padding:0; }
+    .journal-view-text a { color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+    .journal-view-text a:hover { opacity:.6; }
+    .journal-view-text img { max-width:100%; border-radius:4px; margin:8px 0; }
+    .journal-view-photos { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; max-width:900px; }
+    .journal-view-photo { width:100%; border-radius:4px; display:block; object-fit:cover; aspect-ratio:4/3; }
+    .journal-view-photos.single-photo { grid-template-columns:1fr; max-width:600px; }
+    .journal-view-photos.single-photo .journal-view-photo { aspect-ratio:16/10; }
+    .journal-view-empty { font-size:.85rem; color:var(--muted); font-style:italic; padding:20px 0; }
+    .journal-mode-btn { background:none; border:1.5px solid var(--border); border-radius:6px; padding:6px 14px; font-size:.78rem; color:var(--muted); cursor:pointer; transition:all .15s; font-family:inherit; }
+    .journal-mode-btn:hover { border-color:var(--ink); color:var(--ink); }
+    .journal-save-btn { background:var(--ink); border:none; border-radius:6px; padding:6px 14px; font-size:.78rem; color:#fff; cursor:pointer; transition:all .15s; font-family:inherit; }
+    .journal-save-btn:hover { background:#333; }
+
+    /* multi select */
+    .select-bar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg); border-bottom:1px solid var(--border); }
+    .select-bar-count { font-size:.78rem; color:var(--ink); font-weight:600; flex:1; }
+    .select-check { width:16px; height:16px; accent-color:var(--ink); cursor:pointer; flex-shrink:0; margin-top:1px; }
+
+    /* schedule done button */
+    .schedule-done-btn { background:none; border:1.5px solid #bbb; border-radius:50%; width:18px; height:18px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.6rem; transition:all .15s; color:transparent; margin-top:2px; }
+    .schedule-done-btn:hover { border-color:#34A853; color:#34A853; background:#f0faf0; }
+    .schedule-done-btn.is-done { background:#34A853; border-color:#34A853; color:#fff; }
+
+    /* misc */
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#e0e0e0; border-radius:3px; }
+    .pac-container { z-index:9999 !important; }
+    .spinner { display:inline-block; width:18px; height:18px; border:2px solid #e0e0e0; border-top-color:var(--ink); border-radius:50%; animation:spin .6s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    @media (max-width:768px) {
+      .main-topbar { padding:0 20px; }
+      .main-hero { padding:48px 20px 0; }
+      .main-hero-title { font-size:2.4rem; }
+      .map-search-overlay { flex-direction:column; align-items:flex-start; }
+      .search-box { width:280px; }
+      .trips-section { padding:0 20px 60px; }
+      .trips-grid { grid-template-columns:1fr 1fr; }
+      .editorial-feed { padding:0 20px 80px; }
+      .feed-entry { grid-template-columns:1fr; gap:24px; }
+      .feed-entry.expanded .feed-entry-media { float:none; width:100%; margin:0 0 20px 0; }
+      .feed-entry.expanded .feed-entry-media.float-right { float:none; margin:0 0 20px 0; }
+      .journal-inner { padding:24px 20px; }
+      .journal-view-photos { grid-template-columns:1fr; }
+      .feed-entry-title { font-size:1.4rem; }
+      .journal-inner { padding:24px 16px; }
+      .side-panel { width:260px; }
+    }
+    @media (max-width:480px) {
+      .trips-grid { grid-template-columns:1fr; }
+      .side-panel { display:none; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ① 로그인 화면 -->
+  <div class="login-screen" v-if="view==='login'">
+    <div class="login-box">
+      <h1>여행 일지</h1>
+      <p class="login-sub">여행의 모든 순간을 지도 위에 기록하세요</p>
+      <button class="btn-google" @click="signInWithGoogle">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+        Google로 로그인
+      </button>
+    </div>
+  </div>
+
+  <!-- 마이그레이션 모달 -->
+  <div class="migrate-overlay" v-if="showMigrateModal">
+    <div class="migrate-box">
+      <template v-if="migrateStep==='ask'">
+        <h3>기존 데이터가 발견되었어요!</h3>
+        <p>여행 {{ localTripCount }}개, 꾸러미 {{ localBundleCount }}개</p>
+        <p>클라우드에 저장하면 어디서든 접근할 수 있어요.</p>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:20px">
+          <button class="btn btn-cancel" @click="skipMigration">나중에</button>
+          <button class="btn btn-save" @click="startMigration">클라우드로 옮기기</button>
+        </div>
+      </template>
+      <template v-if="migrateStep==='progress'">
+        <h3>마이그레이션 중...</h3>
+        <div class="migrate-progress"><div class="migrate-progress-bar" :style="{width:migratePercent+'%'}"></div></div>
+        <p style="font-size:.82rem;color:var(--muted)">{{ migrateStatus }}</p>
+      </template>
+      <template v-if="migrateStep==='done'">
+        <h3>마이그레이션 완료!</h3>
+        <p>{{ migrateResult }}</p>
+        <button class="btn btn-save" @click="finishMigration" style="margin-top:16px">시작하기</button>
+      </template>
+    </div>
+  </div>
+
+  <!-- 개발자 비밀번호 입력 모달 -->
+  <div class="modal-overlay" :class="{open:showDevPasswordModal}">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-title">관리자 인증<button class="modal-close" @click="showDevPasswordModal=false">✕</button></div>
+      <div class="form-group">
+        <label class="form-label">비밀번호</label>
+        <input class="form-input" type="password" v-model="devPassword" placeholder="비밀번호 입력" @keyup.enter="verifyDevPassword" />
+        <div v-if="devPasswordError" style="color:#ea4335;font-size:.78rem;margin-top:6px">비밀번호가 올바르지 않습니다.</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-cancel" @click="showDevPasswordModal=false">취소</button>
+        <button class="btn btn-save" @click="verifyDevPassword">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 메인 에디토리얼 페이지 -->
+  <div class="main-page" v-if="view==='shelf'">
+    <div class="main-topbar">
+      <div class="main-logo">여행 일지</div>
+      <div class="main-topbar-right" style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-sm btn-save" @click="openNewTripModal">+ 새 여행</button>
+        <div class="user-menu">
+          <button class="user-btn" @click="showUserMenu=!showUserMenu">
+            <img :src="currentUser?.user_metadata?.avatar_url || ''" v-if="currentUser?.user_metadata?.avatar_url" />
+            <span>{{ currentUser?.user_metadata?.full_name || currentUser?.email || '사용자' }}</span>
+            <span style="font-size:.6rem">▾</span>
+          </button>
+          <div class="user-dropdown" v-if="showUserMenu" @mouseleave="showUserMenu=false">
+            <button @click="showDevLogin();showUserMenu=false">⚙️ 설정</button>
+            <button @click="signOut();showUserMenu=false">로그아웃</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- hero -->
+    <div class="main-hero">
+      <div class="main-hero-light"></div>
+      <div class="main-hero-ray3"></div>
+      <div class="main-hero-kicker">Travel Diary</div>
+      <h1 class="main-hero-title">여행이 나를 쌓아가는 중</h1>
+      <div class="main-hero-divider"></div>
+    </div>
+
+    <!-- trip cards -->
+    <div class="trips-section">
+      <div class="section-header">
+        <span class="section-title">여행 프로젝트</span>
+      </div>
+      <div class="trips-grid" v-if="trips.length>0">
+        <div class="trip-card-wrap" v-for="trip in trips" :key="trip.id">
+          <div class="trip-card" @click="openTrip(trip)">
+            <img v-if="tripCoverPhoto(trip)" :src="tripCoverPhoto(trip)" class="trip-card-img" />
+            <div v-else class="trip-card-img-placeholder" :style="{background:trip.theme.cover}">{{ trip.flag }}</div>
+            <div class="trip-card-body">
+              <div class="trip-card-dest">{{ trip.destination }}</div>
+              <div class="trip-card-name">{{ trip.name }}</div>
+              <div class="trip-card-meta">{{ trip.startDate }}{{ trip.endDate?' ~ '+trip.endDate:'' }} · {{ confirmedCount(trip) }}곳</div>
+            </div>
+          </div>
+          <button class="trip-card-edit" @click.stop="openEditTripModal(trip)">수정</button>
+        </div>
+        <div class="trip-card-new" @click="openNewTripModal">
+          <div class="trip-card-new-inner">
+            <span class="trip-card-new-icon">+</span>
+            <span class="trip-card-new-text">새 여행 추가</span>
+          </div>
+        </div>
+      </div>
+      <div v-else class="feed-empty">
+        <div style="font-size:2.5rem;margin-bottom:16px">✈️</div>
+        <div>첫 번째 여행을 추가하고<br>기록을 시작해보세요</div>
+      </div>
+    </div>
+
+    <!-- editorial feed -->
+    <div class="editorial-feed" v-if="tripsWithStory.length>0">
+      <div class="feed-header">
+        <span class="feed-header-title">여행 이야기</span>
+      </div>
+      <div class="feed-entry" v-for="(trip, idx) in tripsWithStory" :key="'feed-'+trip.id"
+        :class="{expanded:feedExpanded[trip.id]}">
+        <!-- 접힌 상태: 2컬럼 그리드 -->
+        <template v-if="!feedExpanded[trip.id]">
+          <div :style="{order: idx%2!==0 ? 2 : 0}">
+            <div class="feed-carousel" v-if="tripAllPhotos(trip).length">
+              <img :src="(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])?.url||(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])" class="feed-carousel-img" />
+              <button class="feed-carousel-btn feed-carousel-prev" v-if="tripAllPhotos(trip).length>1" @click.stop="feedPrev(trip)">‹</button>
+              <button class="feed-carousel-btn feed-carousel-next" v-if="tripAllPhotos(trip).length>1" @click.stop="feedNext(trip)">›</button>
+              <div class="feed-carousel-dots" v-if="tripAllPhotos(trip).length>1">
+                <button class="feed-carousel-dot" v-for="(_, pi) in tripAllPhotos(trip)" :key="pi"
+                  :class="{active:(feedPhotoIdx[trip.id]||0)===pi}"
+                  @click.stop="feedPhotoIdx[trip.id]=pi"></button>
+              </div>
+            </div>
+            <div v-else class="feed-entry-placeholder" :style="{background:trip.theme.cover}">{{ trip.flag }}</div>
+          </div>
+          <div class="feed-entry-text">
+            <div class="feed-entry-kicker">{{ trip.destination }} · {{ trip.startDate }}</div>
+            <div class="feed-entry-title">{{ trip.name }}</div>
+            <div class="feed-entry-body collapsed">{{ tripFullText(trip) }}</div>
+            <div class="feed-entry-actions">
+              <button class="feed-entry-toggle" v-if="tripFullText(trip).length>120" @click.stop="feedExpanded[trip.id]=true">펼치기</button>
+              <button class="feed-entry-cta" @click.stop="openTripJournal(trip)">여행 보러 가기 →</button>
+            </div>
+          </div>
+        </template>
+        <!-- 펼친 상태: 제목 → 사진 float + 글 감싸기 -->
+        <template v-else>
+          <div class="feed-entry-text">
+            <div class="feed-entry-kicker">{{ trip.destination }} · {{ trip.startDate }}</div>
+            <div class="feed-entry-title">{{ trip.name }}</div>
+            <!-- 사진이 제목 아래에서 float -->
+            <div class="feed-entry-media" :class="{'float-right': idx%2!==0}">
+              <div class="feed-carousel" v-if="tripAllPhotos(trip).length">
+                <img :src="(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])?.url||(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])" class="feed-carousel-img" />
+                <button class="feed-carousel-btn feed-carousel-prev" v-if="tripAllPhotos(trip).length>1" @click.stop="feedPrev(trip)">‹</button>
+                <button class="feed-carousel-btn feed-carousel-next" v-if="tripAllPhotos(trip).length>1" @click.stop="feedNext(trip)">›</button>
+                <div class="feed-carousel-dots" v-if="tripAllPhotos(trip).length>1">
+                  <button class="feed-carousel-dot" v-for="(_, pi) in tripAllPhotos(trip)" :key="pi"
+                    :class="{active:(feedPhotoIdx[trip.id]||0)===pi}"
+                    @click.stop="feedPhotoIdx[trip.id]=pi"></button>
+                </div>
+              </div>
+            </div>
+            <div class="feed-entry-body">{{ tripFullText(trip) }}</div>
+            <div style="clear:both"></div>
+            <div class="feed-entry-actions">
+              <button class="feed-entry-toggle" @click.stop="feedExpanded[trip.id]=false">요약</button>
+              <button class="feed-entry-cta" @click.stop="openTripJournal(trip)">여행 보러 가기 →</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 디테일 페이지 -->
+  <div class="detail-page" v-if="view==='map' && currentTrip">
+    <div class="detail-topbar">
+      <button class="back-btn" @click="view='shelf'">← 뒤로</button>
+      <div>
+        <div class="detail-topbar-title">{{ currentTrip.flag }} {{ currentTrip.name }}</div>
+        <div class="detail-topbar-dest">{{ currentTrip.destination }} · {{ currentTrip.startDate }}~{{ currentTrip.endDate }}</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-sm" :style="mapTheme==='sketch'?'background:var(--bg);color:var(--ink);border:1px solid var(--border)':'background:var(--ink);color:#fff'" @click="toggleMapTheme" title="지도 테마 변경">{{ mapTheme==='sketch'?'일반 지도':'일러스트' }}</button>
+        <button class="btn btn-sm" style="background:var(--bg);color:var(--ink);border:1px solid var(--border)" @click="showImportGuide=true">태그 꾸러미</button>
+        <input id="import-file" type="file" accept=".json,.kml,.csv" style="display:none" @change="importFile" />
+        <button class="btn btn-sm btn-save" @click="fitAllPins">전체보기</button>
+      </div>
+    </div>
+
+    <!-- 탭 네비게이션 -->
+    <div class="detail-tabs-bar">
+      <button class="detail-tab-btn" :class="{active:detailTab==='map'}" @click="detailTab='map'">🗺️ 지도</button>
+      <button class="detail-tab-btn" :class="{active:detailTab==='journal'}" @click="detailTab='journal'">📖 여행일기</button>
+    </div>
+
+    <div class="detail-body">
+      <!-- 지도 탭 -->
+      <div class="map-body" v-show="detailTab==='map'">
+        <div class="map-wrapper">
+          <div id="map-canvas"></div>
+          <div class="map-search-overlay">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input id="place-search" class="search-input" placeholder="장소 검색 후 핀 추가..." />
+            </div>
+            <div class="pin-type-btns">
+              <button class="pin-type-btn wish" :class="selectedPinType==='wish'?'active-wish':''" @click="selectedPinType='wish'">🏷️ 태그</button>
+              <button class="pin-type-btn confirmed" :class="selectedPinType==='confirmed'?'active-confirmed':''" @click="selectedPinType='confirmed'">📍 일정</button>
+            </div>
+          </div>
+        </div>
+        <div class="side-panel" ref="sidePanel">
+          <div class="side-resize-handle" @mousedown="startSideResize"></div>
+          <div class="side-tabs">
+            <div class="side-tab" :class="{active:sideTab==='schedule'}" @click="sideTab='schedule'">📅 일정</div>
+            <div class="side-tab" :class="{active:sideTab==='wish'}" @click="sideTab='wish'">🏷️ 태그({{ wishPins.length }})</div>
+            <div class="side-tab" :class="{active:sideTab==='summary'}" @click="sideTab='summary'">📊 요약</div>
+          </div>
+          <div class="side-content">
+            <template v-if="sideTab==='schedule'">
+              <!-- 선택 모드 바 -->
+              <div class="select-bar" v-if="selectMode">
+                <span class="select-bar-count">{{ selectedPinIds.length }}개 선택</span>
+                <button class="btn btn-sm" style="background:#f0f0f0;color:var(--ink);font-size:.72rem" @click="selectAllSchedule">전체</button>
+                <button class="btn btn-sm btn-danger" style="font-size:.72rem" :disabled="!selectedPinIds.length" @click="deleteSelectedPins">삭제</button>
+                <button class="btn btn-sm" style="background:#f0f0f0;color:var(--muted);font-size:.72rem" @click="selectMode=false;selectedPinIds=[]">취소</button>
+              </div>
+              <div v-else style="display:flex;align-items:center;padding:4px 6px 6px">
+                <span style="font-size:.72rem;color:#aaa;flex:1;text-align:center;letter-spacing:.2px">드래그하여 순서·Day 변경</span>
+                <button style="background:none;border:none;font-size:.7rem;color:var(--muted);cursor:pointer;padding:2px 6px" @click="selectMode=true">선택</button>
+              </div>
+              <div class="day-section day-drop-zone" v-for="(dayPins, dayIdx) in confirmedByDay" :key="dayIdx"
+                :class="{'drag-active':dragPin&&dragOverDay===dayIdx}"
+                @dragover.prevent="dragOverDay=dayIdx"
+                @dragleave="dragOverDay=null"
+                @drop.prevent="dragOverDay=null;dropOnDay(dayIdx,true)">
+                <div class="day-header" :style="{background:dayColor(dayIdx)+'18'}">
+                  <div class="day-dot" :style="{background:dayColor(dayIdx)}"></div>
+                  <div class="day-label" :style="{color:dayColor(dayIdx)}">Day {{ dayIdx+1 }}</div>
+                  <div class="day-date-label" v-if="dayDate(dayIdx)">{{ dayDate(dayIdx) }}</div>
+                  <button class="day-del-btn" @click="deleteDay(dayIdx)" title="삭제">✕</button>
+                </div>
+                <div class="schedule-item" v-for="pin in dayPins" :key="pin.id"
+                  :class="{'done-item':pin.type==='done','dragging':dragPin&&dragPin.id===pin.id,'drag-over':dragOverPin===pin.id}"
+                  draggable="true"
+                  @dragstart.stop="startDrag(pin)"
+                  @dragend.stop="endDrag"
+                  @dragover.prevent.stop="dragOverPin=pin.id;dragOverDay=null"
+                  @dragleave.stop="dragOverPin=null"
+                  @drop.prevent.stop="dragOverPin=null;dropOnPin(pin,dayIdx)"
+                  @click="selectMode?toggleSelectPin(pin.id):focusPinWithInfo(pin)">
+                  <input v-if="selectMode" type="checkbox" class="select-check" :checked="selectedPinIds.includes(pin.id)" @click.stop="toggleSelectPin(pin.id)" />
+                  <div v-else class="schedule-order" :style="{background:pin.type==='done'?'#78909C':dayColor(dayIdx)}" @click.stop="focusPin(pin)" title="지도에서 보기">{{ pin.order }}</div>
+                  <div style="flex:1;min-width:0">
+                    <div class="schedule-name">{{ categoryEmoji(pin.category) }} {{ pin.name }}</div>
+                    <div class="schedule-time" v-if="pin.visitTime">🕐 {{ dayDate(pin.day) }} {{ pin.visitTime }}</div>
+                    <div class="schedule-time" v-if="pin.memo" style="color:#888">📝 {{ pin.memo }}</div>
+                  </div>
+                  <button v-if="!selectMode" class="schedule-done-btn" :class="{'is-done':pin.type==='done'}"
+                    @click.stop="togglePinDone(pin)" :title="pin.type==='done'?'완료 취소':'완료 처리'">✓</button>
+                  <span v-if="!selectMode" style="font-size:.85rem;color:#ccc;flex-shrink:0" @click.stop>⠿</span>
+                </div>
+                <div v-if="dayPins.length===0" style="padding:6px 10px;font-size:.78rem;color:#bbb;text-align:center">여기에 핀을 드롭하세요</div>
+              </div>
+              <div v-if="confirmedPins.length===0" style="text-align:center;color:var(--muted);font-size:.82rem;padding:24px 0">📍 일정을 추가하면<br>여기 표시됩니다</div>
+            </template>
+            <template v-if="sideTab==='wish'">
+              <div class="select-bar" v-if="selectMode">
+                <span class="select-bar-count">{{ selectedPinIds.length }}개 선택</span>
+                <button class="btn btn-sm" style="background:#f0f0f0;color:var(--ink);font-size:.72rem" @click="selectAllWish">전체</button>
+                <button class="btn btn-sm btn-danger" style="font-size:.72rem" :disabled="!selectedPinIds.length" @click="deleteSelectedPins">삭제</button>
+                <button class="btn btn-sm" style="background:#f0f0f0;color:var(--muted);font-size:.72rem" @click="selectMode=false;selectedPinIds=[]">취소</button>
+              </div>
+              <div v-else-if="wishPins.length>0" style="display:flex;justify-content:flex-end;padding:4px 6px 6px">
+                <button style="background:none;border:none;font-size:.7rem;color:var(--muted);cursor:pointer;padding:2px 6px" @click="selectMode=true">선택</button>
+              </div>
+              <div v-if="wishPins.length===0&&!selectMode" style="text-align:center;color:var(--muted);font-size:.82rem;padding:24px 0">🏷️ 검색창에서 <b>태그</b> 선택 후<br>장소를 검색해 추가하세요</div>
+              <div class="wish-item" v-for="pin in wishPins" :key="pin.id" @click="selectMode?toggleSelectPin(pin.id):focusPinWithInfo(pin)">
+                <input v-if="selectMode" type="checkbox" class="select-check" :checked="selectedPinIds.includes(pin.id)" @click.stop="toggleSelectPin(pin.id)" />
+                <span v-else style="font-size:1rem;flex-shrink:0">🏷️</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:.83rem;font-weight:600">{{ categoryEmoji(pin.category) }} {{ pin.name }}</div>
+                  <div class="schedule-time" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ pin.address }}</div>
+                </div>
+                <button v-if="!selectMode" style="background:none;border:none;color:#bbb;cursor:pointer;padding:2px 6px;" @click.stop="openPinModal(pin)">✏️</button>
+              </div>
+            </template>
+            <template v-if="sideTab==='summary'">
+              <div style="padding:4px 0">
+                <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px">여행 통계</div>
+                <div v-for="row in summaryRows" :key="row.label" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:.85rem">
+                  <span style="color:var(--muted)">{{ row.label }}</span><span style="font-weight:600">{{ row.value }}</span>
+                </div>
+              </div>
+            </template>
+          </div>
+          <!-- Day 색상 패널 -->
+          <div class="color-panel" v-if="days.length>0">
+            <div class="color-panel-header" @click="showColorPanel=!showColorPanel">
+              <span class="color-panel-title">Day 색상</span>
+              <span class="color-panel-arrow" :class="{open:showColorPanel}">›</span>
+            </div>
+            <div class="color-panel-body" v-show="showColorPanel">
+              <div class="color-row" v-for="(_,i) in days" :key="i">
+                <div class="color-swatch" :style="{background:dayColor(i)}"></div>
+                <span class="color-label">Day {{ i+1 }}{{ dayDate(i)?' · '+dayDate(i).slice(5):'' }}</span>
+                <input type="color" :value="dayColor(i)" @input="setDayColor(i,$event.target.value)" class="color-input" />
+              </div>
+              <div class="color-row">
+                <div class="color-swatch" style="background:#78909C"></div>
+                <span class="color-label" style="flex:1;color:#888">완료 핀</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 여행일기 탭 -->
+      <div class="journal-tab" v-show="detailTab==='journal'">
+        <div class="journal-inner">
+          <div class="journal-day" v-for="(_, dayIdx) in days" :key="'j'+dayIdx">
+            <div class="journal-day-header">
+              <span class="journal-day-num">Day {{ dayIdx+1 }}</span>
+              <span class="journal-day-date" v-if="dayDate(dayIdx)">{{ dayDate(dayIdx) }}</span>
+              <div class="journal-day-divider"></div>
+              <button class="journal-mode-btn" @click="toggleJournalEdit(dayIdx)">
+                {{ journalEditDays[dayIdx] ? '저장' : '수정' }}
+              </button>
+            </div>
+            <!-- 해당 Day 핀 칩 -->
+            <div class="journal-pins-row" v-if="confirmedByDay[dayIdx] && confirmedByDay[dayIdx].length">
+              <span class="journal-pin-chip" v-for="pin in confirmedByDay[dayIdx]" :key="pin.id">
+                {{ categoryEmoji(pin.category) }} {{ pin.name }}
+              </span>
+            </div>
+
+            <!-- ===== 편집 모드 ===== -->
+            <template v-if="journalEditDays[dayIdx]">
+              <textarea class="journal-textarea"
+                :value="getJournalText(dayIdx)"
+                @input="setJournalText(dayIdx,$event.target.value)"
+                placeholder="오늘 여행은 어떠셨나요? 기억에 남는 순간을 기록해보세요..."></textarea>
+              <div class="journal-photos-grid" v-if="getJournalPhotos(dayIdx).length">
+                <div class="journal-photo" v-for="(photo, pi) in getJournalPhotos(dayIdx)" :key="pi"
+                  :class="{'is-thumbnail': currentTrip.thumbnail===(photo.url||photo)}">
+                  <img :src="photo.url||photo" />
+                  <button class="journal-photo-thumb" @click="setTripThumbnail(photo.url||photo)">{{ currentTrip.thumbnail===(photo.url||photo) ? '썸네일' : '썸네일 지정' }}</button>
+                  <button class="journal-photo-del" @click="removeJournalPhoto(dayIdx,pi)">✕</button>
+                </div>
+              </div>
+              <button class="journal-add-photo-btn" @click="pickJournalPhoto(dayIdx)">📷 사진 추가</button>
+              <input :id="'journal-photo-'+dayIdx" type="file" accept="image/*" multiple style="display:none" @change="onJournalPhotoSelected(dayIdx,$event)" />
+            </template>
+
+            <!-- ===== 블로그 뷰 모드 ===== -->
+            <template v-else>
+              <template v-if="getJournalText(dayIdx)||getJournalPhotos(dayIdx).length">
+                <!-- 사진 블로그 스타일 (연속 배치) -->
+                <div class="journal-view-photos" v-if="getJournalPhotos(dayIdx).length"
+                  :class="{'single-photo': getJournalPhotos(dayIdx).length===1}">
+                  <img v-for="(photo,pi) in getJournalPhotos(dayIdx)" :key="pi"
+                    :src="photo.url||photo" class="journal-view-photo" />
+                </div>
+                <div class="journal-view-text" v-if="getJournalText(dayIdx)" v-html="renderMarkdown(getJournalText(dayIdx))"></div>
+              </template>
+              <div class="journal-view-empty" v-else>
+                아직 기록이 없어요. 수정 버튼을 눌러 여행 이야기를 남겨보세요.
+              </div>
+            </template>
+          </div>
+          <div v-if="days.length===0" style="text-align:center;color:var(--muted);padding:60px 0;font-size:.88rem">
+            여행 날짜를 설정하면 Day별로 기록할 수 있어요
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 여행 모달 -->
+  <div class="modal-overlay" :class="{open:showTripModal}">
+    <div class="modal">
+      <div class="modal-title">{{ tripModalMode==='edit'?'여행 수정':'새 여행 만들기' }}<button class="modal-close" @click="closeTripModal">✕</button></div>
+      <div class="form-group">
+        <label class="form-label">여행 이름 *</label>
+        <input class="form-input" v-model="tripForm.name" placeholder="예: 파리 봄 여행" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">목적지 검색 * <span style="font-weight:400;color:var(--muted);font-size:.78rem">(지도 중심 자동 설정)</span></label>
+        <input id="new-trip-dest-input" class="form-input" placeholder="나라, 도시, 지역 이름 검색..." autocomplete="off" />
+        <div class="dest-selected" v-if="tripForm.centerLat">
+          <div class="dest-flag">{{ tripForm.flag }}</div>
+          <div class="dest-info">
+            <div class="dest-name">{{ tripForm.destination }}</div>
+            <div class="dest-addr">{{ tripForm.destAddress }}</div>
+            <div class="dest-coords">{{ tripForm.centerLat.toFixed(4) }}, {{ tripForm.centerLng.toFixed(4) }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">출발일</label><input class="form-input" type="date" v-model="tripForm.startDate" /></div>
+        <div class="form-group"><label class="form-label">귀국일</label><input class="form-input" type="date" v-model="tripForm.endDate" /></div>
+      </div>
+      <div v-if="tripForm.startDate&&tripForm.endDate" style="font-size:.8rem;color:var(--ink);margin-bottom:12px;padding:8px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+        {{ calcDays(tripForm.startDate,tripForm.endDate) }}일 여행 → Day {{ calcDays(tripForm.startDate,tripForm.endDate) }}까지 자동 생성
+      </div>
+      <div class="form-group">
+        <label class="form-label">표지 색상</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div v-for="(t,i) in THEMES" :key="i" style="width:32px;height:42px;border-radius:3px;cursor:pointer;transition:all .15s"
+            :style="{background:t.cover,outline:tripForm.themeIdx===i?'3px solid var(--ink)':'none',outlineOffset:'2px'}"
+            @click="tripForm.themeIdx=i"></div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button v-if="tripModalMode==='edit'" class="btn btn-danger" style="margin-right:auto" @click="deleteTrip">삭제</button>
+        <button class="btn btn-cancel" @click="closeTripModal">취소</button>
+        <button class="btn btn-save" @click="saveTripModal">{{ tripModalMode==='edit'?'수정':'만들기' }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 핀 편집 모달 (일정 등록/수정) -->
+  <div class="modal-overlay" :class="{open:showPinModal}">
+    <div class="modal">
+      <div class="modal-title">
+        {{ editPin?(editPin.type==='wish'?'🏷️ 태그 수정':editPin.type==='done'?'🟢 완료 수정':'📍 일정 등록'):'' }}
+        <button class="modal-close" @click="showPinModal=false">✕</button>
+      </div>
+      <template v-if="editPin">
+        <div style="font-size:.88rem;font-weight:600;margin-bottom:12px;color:var(--ink)">{{ categoryEmoji(editPin.category) }} {{ editPin.name }}</div>
+        <div class="form-group">
+          <label class="form-label">핀 종류</label>
+          <div style="display:flex;gap:8px">
+            <button v-for="t in pinTypes" :key="t.val" class="btn btn-sm"
+              :style="editPin.type===t.val?`background:${t.color};color:#fff`:'background:#f0f0f0'"
+              @click="editPin.type=t.val">{{ t.icon }} {{ t.label }}</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">카테고리</label>
+          <select class="form-input" v-model="editPin.category">
+            <option v-for="cat in categoryList" :key="cat.val" :value="cat.val">{{ cat.icon }} {{ cat.label }}</option>
+          </select>
+        </div>
+        <div class="form-row" v-if="editPin.type!=='wish'">
+          <div class="form-group">
+            <label class="form-label">Day</label>
+            <select class="form-input" v-model="editPin.day" @change="onPinDayChange">
+              <option v-for="(_,i) in days" :key="i" :value="i">Day {{ i+1 }}{{ dayDate(i)?' · '+dayDate(i).slice(5):'' }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">방문 순서</label>
+            <div style="padding:9px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-size:.88rem;color:#555">
+              {{ editPin.order }}번 <span style="font-size:.75rem;color:#aaa">· 드래그로 변경</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" v-if="editPin.type!=='wish'">
+          <label class="form-label">방문 예정 일시</label>
+          <div class="datetime-row">
+            <div class="date-chip">{{ dayDate(editPin.day)||'날짜 미정' }}</div>
+            <input class="form-input time-input" type="time" v-model="editPin.visitTime" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">메모</label>
+          <textarea class="form-input" v-model="editPin.memo" rows="3" placeholder="입장권 예약, 영업시간 등..." style="resize:vertical"></textarea>
+        </div>
+        <div class="form-group" v-if="editPin.type!=='wish'">
+          <label class="form-label">예약 링크</label>
+          <input class="form-input" v-model="editPin.reservationUrl" placeholder="https://..." />
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-danger" style="margin-right:auto" @click="deletePin">삭제</button>
+          <button class="btn btn-cancel" @click="showPinModal=false">취소</button>
+          <button class="btn btn-save" @click="savePin()">저장</button>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- 라인 메모 -->
+  <div class="modal-overlay" :class="{open:showLineMemo}">
+    <div class="modal" style="max-width:340px">
+      <div class="modal-title">이동 구간 메모<button class="modal-close" @click="showLineMemo=false">✕</button></div>
+      <template v-if="editRoute">
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">{{ editRoute.fromName }} → {{ editRoute.toName }}</div>
+        <div class="form-group">
+          <label class="form-label">이동 수단</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button v-for="t in transportTypes" :key="t.val" class="btn btn-sm"
+              :style="editRoute.transport===t.val?'background:var(--ink);color:#fff':'background:#f0f0f0'"
+              @click="editRoute.transport=t.val">{{ t.icon }} {{ t.label }}</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">이동 시간</label><input class="form-input" v-model="editRoute.duration" placeholder="30분" /></div>
+          <div class="form-group"><label class="form-label">거리</label><input class="form-input" v-model="editRoute.distance" placeholder="2.5km" /></div>
+        </div>
+        <div class="form-group"><label class="form-label">메모</label><textarea class="form-input" v-model="editRoute.memo" rows="3" style="resize:vertical"></textarea></div>
+      </template>
+      <div class="form-actions">
+        <button class="btn btn-cancel" @click="showLineMemo=false">취소</button>
+        <button class="btn btn-save" @click="saveRoute">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 개발자 설정 모달 (비밀번호 인증 후) -->
+  <div class="modal-overlay" :class="{open:showSettingsModal}">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-title">🔧 개발자 설정<button class="modal-close" @click="showSettingsModal=false">✕</button></div>
+      <div class="form-group">
+        <label class="form-label">Maps API Key <span style="color:#ea4335;font-size:.7rem">필수</span></label>
+        <input class="form-input" v-model="settingsApiKey" placeholder="AIza..." />
+        <div style="font-size:.72rem;color:var(--muted);margin-top:4px;line-height:1.6">
+          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--ink)">Google Cloud Console</a> → Maps JavaScript API + Places API 활성화
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">개발자 비밀번호 변경</label>
+        <input class="form-input" type="password" v-model="newDevPassword" placeholder="새 비밀번호 (변경 시에만 입력)" />
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-cancel" @click="showSettingsModal=false">취소</button>
+        <button class="btn btn-save" @click="saveSettings">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 태그 꾸러미 모달 -->
+  <div class="modal-overlay" :class="{open:showImportGuide}">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-title">태그 꾸러미<button class="modal-close" @click="closeImportGuide">✕</button></div>
+
+      <!-- Step 1: 파일 선택 또는 저장된 꾸러미 -->
+      <template v-if="importStep==='select'">
+        <!-- 저장된 태그 꾸러미 목록 -->
+        <div v-if="savedBundles.length>0" style="margin-bottom:20px">
+          <div style="font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:10px">태그 꾸러미</div>
+          <div v-for="b in savedBundles" :key="b.name"
+            style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:all .15s"
+            @click="loadSavedBundle(b)">
+            <span style="font-size:1.2rem">🏷️</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:.88rem;font-weight:600">{{ b.name }}</div>
+              <div style="font-size:.72rem;color:var(--muted)">{{ b.places.length }}곳 · {{ b.createdAt }}</div>
+            </div>
+            <button style="background:none;border:none;color:#ccc;cursor:pointer;font-size:.8rem;padding:4px" @click.stop="deleteSavedBundle(b.name)" title="삭제">✕</button>
+          </div>
+        </div>
+
+        <div style="font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:10px">새 파일 업로드</div>
+        <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid var(--border)">
+          <div style="font-weight:700;font-size:.85rem;margin-bottom:6px">Google Maps 저장 목록 (CSV)</div>
+          <ol style="font-size:.78rem;color:var(--muted);padding-left:18px;line-height:1.8">
+            <li>Google Maps → 저장됨 → 목록 선택 → ⋮ → 목록 다운로드</li>
+            <li>다운받은 <b>.csv</b> 파일 업로드</li>
+          </ol>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:6px;padding:6px 8px;background:rgba(0,0,0,.03);border-radius:4px">
+            * CSV 업로드 시 Places API로 좌표를 조회합니다 (장소 수에 따라 시간이 걸릴 수 있어요)
+          </div>
+        </div>
+        <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid var(--border)">
+          <div style="font-weight:700;font-size:.85rem;margin-bottom:6px">Takeout JSON / KML</div>
+          <ol style="font-size:.78rem;color:var(--muted);padding-left:18px;line-height:1.8">
+            <li><a href="https://takeout.google.com" target="_blank" style="color:var(--ink)">takeout.google.com</a> → "지도(내 장소)" 체크 → 내보내기</li>
+            <li>ZIP 안의 .json 또는 .kml 파일 업로드</li>
+          </ol>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-cancel" @click="closeImportGuide">취소</button>
+          <button class="btn btn-save" @click="pickImportFile">파일 선택 →</button>
+        </div>
+      </template>
+
+      <!-- 로딩 -->
+      <template v-if="importStep==='loading'">
+        <div style="text-align:center;padding:40px 0">
+          <div class="spinner" style="width:36px;height:36px;border-width:3px;margin:0 auto 16px"></div>
+          <div style="font-size:.92rem;font-weight:600;color:var(--ink);margin-bottom:6px">장소 조회 중...</div>
+          <div style="font-size:.82rem;color:var(--muted)">{{ importProgress }} / {{ importTotal }}곳</div>
+          <div style="margin-top:14px;background:var(--border);border-radius:4px;height:6px;overflow:hidden">
+            <div style="height:100%;background:var(--ink);border-radius:4px;transition:width .3s" :style="{width:(importTotal?importProgress/importTotal*100:0)+'%'}"></div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Step 2-A: 새 파일 미리보기 → 불러오기/저장 -->
+      <template v-if="importStep==='preview'">
+        <div style="background:var(--bg);border-radius:10px;padding:16px;margin-bottom:16px;border:1px solid var(--border);text-align:center">
+          <div style="font-size:2.5rem;margin-bottom:8px">🏷️</div>
+          <div style="font-size:1.3rem;font-weight:700;color:var(--ink)">{{ importPreviewPlaces.length }}곳</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-top:4px">태그로 추가할 장소</div>
+        </div>
+        <div style="margin-bottom:16px;max-height:140px;overflow-y:auto">
+          <div v-for="(p,i) in importPreviewPlaces.slice(0,10)" :key="i"
+            style="font-size:.8rem;padding:4px 0;border-bottom:1px solid var(--border);color:var(--ink-2)">
+            {{ p.name }} <span style="color:var(--muted)">{{ p.address ? '· '+p.address.slice(0,30) : '' }}</span>
+          </div>
+          <div v-if="importPreviewPlaces.length>10" style="font-size:.75rem;color:var(--muted);padding:6px 0">
+            ... 외 {{ importPreviewPlaces.length-10 }}곳
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">꾸러미로 저장하려면 이름 입력</label>
+          <input class="form-input" v-model="importBundleName" placeholder="예: 도쿄 맛집, 파리 관광지..." />
+        </div>
+        <div class="form-actions" style="flex-wrap:wrap;gap:8px">
+          <button class="btn btn-cancel" @click="importStep='select';importPreviewPlaces=[]">← 뒤로</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-sm btn-save" @click="confirmImport('once')">불러오기</button>
+          <button class="btn btn-save" @click="confirmImport('save')" v-if="importBundleName.trim()">저장 후 불러오기</button>
+        </div>
+      </template>
+
+      <!-- Step 2-B: 저장된 꾸러미 미리보기 → 불러오기만 -->
+      <template v-if="importStep==='bundle'">
+        <div style="background:var(--bg);border-radius:10px;padding:16px;margin-bottom:16px;border:1px solid var(--border);text-align:center">
+          <div style="font-size:2.5rem;margin-bottom:8px">🏷️</div>
+          <div style="font-size:1rem;font-weight:700;color:var(--ink)">{{ importBundleName }}</div>
+          <div style="font-size:1.3rem;font-weight:700;color:var(--ink);margin-top:4px">{{ importPreviewPlaces.length }}곳</div>
+        </div>
+        <div style="margin-bottom:16px;max-height:160px;overflow-y:auto">
+          <div v-for="(p,i) in importPreviewPlaces.slice(0,10)" :key="i"
+            style="font-size:.8rem;padding:4px 0;border-bottom:1px solid var(--border);color:var(--ink-2)">
+            {{ p.name }} <span style="color:var(--muted)">{{ p.address ? '· '+p.address.slice(0,30) : '' }}</span>
+          </div>
+          <div v-if="importPreviewPlaces.length>10" style="font-size:.75rem;color:var(--muted);padding:6px 0">
+            ... 외 {{ importPreviewPlaces.length-10 }}곳
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-cancel" @click="importStep='select';importPreviewPlaces=[]">← 뒤로</button>
+          <button class="btn btn-save" @click="confirmImport('once')">불러오기</button>
+        </div>
+      </template>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, watch, nextTick } = Vue
+
+const THEMES = [
+  {spine:'#7C9EB2',cover:'linear-gradient(160deg,#BDD4E0 0%,#A3C4D5 60%,#8BB4CA 100%)'},
+  {spine:'#8BA88B',cover:'linear-gradient(160deg,#BCDABC 0%,#A2CCA2 60%,#8BBF8B 100%)'},
+  {spine:'#C4908B',cover:'linear-gradient(160deg,#EABFBA 0%,#DBA9A3 60%,#CC938C 100%)'},
+  {spine:'#9B8BB5',cover:'linear-gradient(160deg,#CBBFE0 0%,#B8AAD3 60%,#A595C6 100%)'},
+  {spine:'#C4A87C',cover:'linear-gradient(160deg,#E5D5B5 0%,#D9C59E 60%,#CDB588 100%)'},
+  {spine:'#7CB5B5',cover:'linear-gradient(160deg,#ADE0E0 0%,#94D2D2 60%,#7CC4C4 100%)'},
+  {spine:'#B59B8B',cover:'linear-gradient(160deg,#DBC8B8 0%,#CCB5A2 60%,#BDA28C 100%)'},
+  {spine:'#8B8B9B',cover:'linear-gradient(160deg,#B8B8CC 0%,#A5A5B8 60%,#9292A8 100%)'},
+]
+const DAY_COLORS = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#A78BFA','#FB923C','#34D399','#F472B6','#60A5FA','#FBBF24']
+const CATEGORY_MAP = {
+  '식당':'🍽️','카페':'☕','숙소':'🏨','관광지':'🏛️','박물관':'🏛️','공원':'🌳',
+  '쇼핑':'🛍️','공항':'✈️','교통':'🚇','해변':'🏖️','액티비티':'🎡','기타':'📍'
+}
+const CATEGORY_LIST = [
+  {val:'식당',label:'식당',icon:'🍽️'},{val:'카페',label:'카페',icon:'☕'},
+  {val:'숙소',label:'숙소',icon:'🏨'},{val:'관광지',label:'관광지',icon:'🏛️'},
+  {val:'박물관',label:'박물관',icon:'🏛️'},{val:'공원',label:'공원',icon:'🌳'},
+  {val:'쇼핑',label:'쇼핑',icon:'🛍️'},{val:'공항',label:'공항',icon:'✈️'},
+  {val:'교통',label:'교통',icon:'🚇'},{val:'해변',label:'해변',icon:'🏖️'},
+  {val:'액티비티',label:'액티비티',icon:'🎡'},{val:'기타',label:'기타',icon:'📍'},
+]
+const SKETCH_STYLE = [
+  {elementType:'geometry',stylers:[{color:'#f9f3e8'}]},
+  {elementType:'labels.text.fill',stylers:[{color:'#6e4c2d'}]},
+  {elementType:'labels.text.stroke',stylers:[{color:'#fff9f0'},{weight:2}]},
+  {featureType:'administrative',elementType:'geometry.stroke',stylers:[{color:'#c9b2a6'},{weight:1.5}]},
+  {featureType:'landscape.natural',elementType:'geometry',stylers:[{color:'#dde5c8'}]},
+  {featureType:'landscape.man_made',elementType:'geometry.fill',stylers:[{color:'#f5ece0'}]},
+  {featureType:'poi',elementType:'geometry',stylers:[{color:'#d5e0b0'}]},
+  {featureType:'poi',elementType:'labels.text.fill',stylers:[{color:'#6e7c3a'}]},
+  {featureType:'poi.park',elementType:'geometry',stylers:[{color:'#a8c070'}]},
+  {featureType:'poi.park',elementType:'labels.text.fill',stylers:[{color:'#3a5c32'}]},
+  {featureType:'road',elementType:'geometry',stylers:[{color:'#f5dfc0'}]},
+  {featureType:'road',elementType:'geometry.stroke',stylers:[{color:'#d4a96a'},{weight:1}]},
+  {featureType:'road',elementType:'labels.text.fill',stylers:[{color:'#9a6533'}]},
+  {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#f0c98e'}]},
+  {featureType:'road.highway',elementType:'geometry.stroke',stylers:[{color:'#c8934a'},{weight:1.5}]},
+  {featureType:'transit',elementType:'labels.icon',stylers:[{saturation:-40}]},
+  {featureType:'water',elementType:'geometry.fill',stylers:[{color:'#a8d4e8'}]},
+  {featureType:'water',elementType:'labels.text.fill',stylers:[{color:'#4a90b8'}]},
+]
+
+function countryCodeToFlag(code) {
+  if (!code||code.length!==2) return '✈️'
+  return [...code.toUpperCase()].map(c=>String.fromCodePoint(c.charCodeAt(0)+127397)).join('')
+}
+const FLAG_TEXT = {'프랑스':'🇫🇷','파리':'🇫🇷','일본':'🇯🇵','도쿄':'🇯🇵','오사카':'🇯🇵','미국':'🇺🇸','뉴욕':'🇺🇸','영국':'🇬🇧','런던':'🇬🇧','이탈리아':'🇮🇹','로마':'🇮🇹','스페인':'🇪🇸','독일':'🇩🇪','태국':'🇹🇭','방콕':'🇹🇭','베트남':'🇻🇳','다낭':'🇻🇳','한국':'🇰🇷','서울':'🇰🇷','제주':'🇰🇷','싱가포르':'🇸🇬','홍콩':'🇭🇰','대만':'🇹🇼','호주':'🇦🇺','두바이':'🇦🇪','발리':'🇮🇩'}
+function guessFlag(text) {
+  if (!text) return '✈️'
+  for (const [k,v] of Object.entries(FLAG_TEXT)) if (text.toLowerCase().includes(k.toLowerCase())) return v
+  return '✈️'
+}
+function calcDays(start,end) {
+  if (!start||!end) return 1
+  return Math.max(1,Math.ceil((new Date(end)-new Date(start))/(86400000))+1)
+}
+
+createApp({
+  setup() {
+    const DEFAULT_API_KEY = 'AIzaSyBMOt0n3vL67pasgZ9n4VKxQtS4HrCxYyM'
+    const DEV_PASSWORD_KEY = 'dev_password'
+    const DEFAULT_DEV_PASSWORD = 'admin1234'
+
+    // ── Supabase 초기화 ──────────────────────────
+    const SUPABASE_URL = 'https://ngddhqkatwiitfynkbud.supabase.co'
+    const SUPABASE_ANON_KEY = 'sb_publishable_x23Bg3qQ9hQcbFp5N9oR6g_AXHUmxf-'
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+    // API Key / 비밀번호 초기화
+    if (!localStorage.getItem('gmaps_key') && DEFAULT_API_KEY !== 'YOUR_API_KEY_HERE') {
+      localStorage.setItem('gmaps_key', DEFAULT_API_KEY)
+    }
+    if (!localStorage.getItem(DEV_PASSWORD_KEY)) {
+      localStorage.setItem(DEV_PASSWORD_KEY, DEFAULT_DEV_PASSWORD)
+    }
+
+    const view = ref('login')
+    const apiKeyInput = ref('')
+    const currentUser = ref(null)
+    const showUserMenu = ref(false)
+
+    // ── Auth ──────────────────────────────────────
+    async function signInWithGoogle() {
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+      })
+      if (error) alert('로그인 실패: ' + error.message)
+    }
+    async function signOut() {
+      await sb.auth.signOut()
+      currentUser.value = null
+      trips.value = []
+      currentTrip.value = null
+      view.value = 'login'
+    }
+
+    // 세션 복원 + 상태 감시
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        currentUser.value = session.user
+        view.value = 'shelf'
+        loadTripsFromDB()
+        checkLocalMigration()
+      }
+    })
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        currentUser.value = session.user
+        view.value = 'shelf'
+        loadTripsFromDB()
+        checkLocalMigration()
+      } else if (event === 'SIGNED_OUT') {
+        currentUser.value = null
+        view.value = 'login'
+      }
+    })
+
+    // ── 개발자 인증 ──────────────────────────────
+    const showDevPasswordModal = ref(false)
+    const devPassword = ref('')
+    const devPasswordError = ref(false)
+    const newDevPassword = ref('')
+
+    function showDevLogin() {
+      devPassword.value = ''
+      devPasswordError.value = false
+      showDevPasswordModal.value = true
+    }
+    function verifyDevPassword() {
+      const stored = localStorage.getItem(DEV_PASSWORD_KEY) || DEFAULT_DEV_PASSWORD
+      if (devPassword.value === stored) {
+        showDevPasswordModal.value = false
+        devPasswordError.value = false
+        settingsApiKey.value = localStorage.getItem('gmaps_key') || ''
+        newDevPassword.value = ''
+        showSettingsModal.value = true
+      } else {
+        devPasswordError.value = true
+      }
+    }
+
+    // ── dataStore (Supabase CRUD) ────────────────
+    // camelCase ↔ snake_case 매핑
+    function mapTripFromDB(row) {
+      return {
+        id:row.id, name:row.name, destination:row.destination,
+        destAddress:row.dest_address, flag:row.flag,
+        centerLat:row.center_lat, centerLng:row.center_lng,
+        startDate:row.start_date, endDate:row.end_date,
+        theme:row.theme||{}, days:row.days||1,
+        dayColors:row.day_colors||[], thumbnail:row.thumbnail,
+        pins:(row.pins||[]).map(mapPinFromDB),
+        routes:(row.routes||[]).map(mapRouteFromDB),
+        journal: buildJournalArray(row.journals||[], row.days||1),
+      }
+    }
+    function mapPinFromDB(p) {
+      return {
+        id:p.id, type:p.type, name:p.name, address:p.address,
+        lat:p.lat, lng:p.lng, category:p.category, rating:p.rating,
+        placeId:p.place_id, order:p.sort_order, day:p.day,
+        visitTime:p.visit_time, memo:p.memo,
+        reservationUrl:p.reservation_url,
+      }
+    }
+    function mapRouteFromDB(r) {
+      return {
+        id:r.id, fromPinId:r.from_pin_id, toPinId:r.to_pin_id,
+        transport:r.transport, duration:r.duration,
+        distance:r.distance, memo:r.memo,
+      }
+    }
+    function buildJournalArray(journals, days) {
+      const arr = []
+      for (let i = 0; i < days; i++) arr.push({ text:'', photos:[] })
+      for (const j of journals) {
+        if (j.day_index < arr.length) {
+          arr[j.day_index] = {
+            _id: j.id,
+            text: j.text || '',
+            photos: (j.journal_photos||[]).sort((a,b)=>a.sort_order-b.sort_order).map(p=>({
+              _id: p.id, _path: p.storage_path, url: p.url, isThumbnail: p.is_thumbnail
+            }))
+          }
+        }
+      }
+      return arr
+    }
+
+    async function loadTripsFromDB() {
+      const { data, error } = await sb.from('trips').select(`
+        *, pins(*), routes(*),
+        journals(*, journal_photos(*))
+      `).order('created_at', { ascending: false })
+      if (error) { console.error('loadTrips error', error); return }
+      trips.value = data.map(mapTripFromDB)
+      // savedBundles도 로드
+      const { data: bundles } = await sb.from('saved_bundles')
+        .select('*').order('created_at', { ascending: false })
+      if (bundles) savedBundles.value = bundles.map(b=>({ _id:b.id, name:b.name, places:b.places }))
+    }
+
+    async function saveTripToDB(trip) {
+      const user = currentUser.value
+      if (!user) return
+      const dbTrip = {
+        user_id: user.id, name: trip.name,
+        destination: trip.destination, dest_address: trip.destAddress,
+        flag: trip.flag, center_lat: trip.centerLat, center_lng: trip.centerLng,
+        start_date: trip.startDate, end_date: trip.endDate,
+        theme: trip.theme, days: trip.days,
+        day_colors: trip.dayColors, thumbnail: trip.thumbnail,
+        updated_at: new Date().toISOString(),
+      }
+      if (trip._isNew) {
+        const { data, error } = await sb.from('trips').insert(dbTrip).select().single()
+        if (error) { console.error('insertTrip', error); return null }
+        return data.id
+      } else {
+        const { error } = await sb.from('trips').update(dbTrip).eq('id', trip.id)
+        if (error) console.error('updateTrip', error)
+        return trip.id
+      }
+    }
+
+    async function deleteTripFromDB(tripId) {
+      // Storage에서 사진도 삭제
+      const user = currentUser.value
+      if (user) {
+        const { data: files } = await sb.storage.from('journal-photos').list(`${user.id}/${tripId}`, { limit: 1000 })
+        if (files?.length) {
+          // 하위 폴더까지 재귀 삭제가 필요하지만 간단히 처리
+          // journals 삭제 시 CASCADE로 journal_photos도 삭제됨
+        }
+        await sb.storage.from('journal-photos').remove(
+          (files||[]).map(f=>`${user.id}/${tripId}/${f.name}`)
+        )
+      }
+      const { error } = await sb.from('trips').delete().eq('id', tripId)
+      if (error) console.error('deleteTrip', error)
+    }
+
+    async function savePinToDB(tripId, pin) {
+      const dbPin = {
+        trip_id: tripId, type: pin.type, name: pin.name,
+        address: pin.address, lat: pin.lat, lng: pin.lng,
+        category: pin.category, rating: pin.rating,
+        place_id: pin.placeId, sort_order: pin.order || 0,
+        day: pin.day || 0, visit_time: pin.visitTime,
+        memo: pin.memo, reservation_url: pin.reservationUrl,
+      }
+      if (pin._isNew || !pin.id || pin.id.toString().length < 20) {
+        const { data, error } = await sb.from('pins').insert(dbPin).select().single()
+        if (error) { console.error('insertPin', error); return null }
+        return data.id
+      } else {
+        const { error } = await sb.from('pins').update(dbPin).eq('id', pin.id)
+        if (error) console.error('updatePin', error)
+        return pin.id
+      }
+    }
+
+    async function deletePinFromDB(pinId) {
+      await sb.from('pins').delete().eq('id', pinId)
+    }
+
+    async function saveRouteToDB(tripId, route) {
+      const dbRoute = {
+        trip_id: tripId, from_pin_id: route.fromPinId,
+        to_pin_id: route.toPinId, transport: route.transport,
+        duration: route.duration, distance: route.distance, memo: route.memo,
+      }
+      if (route._isNew || !route.id || route.id.toString().length < 20) {
+        const { data, error } = await sb.from('routes').insert(dbRoute).select().single()
+        if (error) { console.error('insertRoute', error); return null }
+        return data.id
+      } else {
+        const { error } = await sb.from('routes').update(dbRoute).eq('id', route.id)
+        if (error) console.error('updateRoute', error)
+        return route.id
+      }
+    }
+
+    async function deleteRouteFromDB(routeId) {
+      await sb.from('routes').delete().eq('id', routeId)
+    }
+
+    async function saveJournalTextToDB(tripId, dayIndex, text) {
+      const { data, error } = await sb.from('journals')
+        .upsert({ trip_id: tripId, day_index: dayIndex, text, updated_at: new Date().toISOString() },
+          { onConflict: 'trip_id,day_index' })
+        .select().single()
+      if (error) console.error('saveJournal', error)
+      return data
+    }
+
+    async function uploadPhotoToDB(tripId, dayIndex, file) {
+      const user = currentUser.value
+      if (!user) return null
+      const ext = file.name?.split('.').pop() || 'jpg'
+      const path = `${user.id}/${tripId}/${dayIndex}/${Date.now()}.${ext}`
+
+      const { error: upErr } = await sb.storage.from('journal-photos').upload(path, file, { contentType: file.type })
+      if (upErr) { console.error('uploadPhoto', upErr); return null }
+
+      const { data: urlData } = await sb.storage.from('journal-photos').createSignedUrl(path, 60*60*24*365)
+
+      // journal 레코드 확보
+      const { data: journal } = await sb.from('journals')
+        .upsert({ trip_id: tripId, day_index: dayIndex }, { onConflict: 'trip_id,day_index' })
+        .select().single()
+
+      const { data: photo, error } = await sb.from('journal_photos')
+        .insert({ journal_id: journal.id, storage_path: path, url: urlData.signedUrl, sort_order: 0 })
+        .select().single()
+      if (error) { console.error('insertPhoto', error); return null }
+      return { _id: photo.id, _path: photo.storage_path, url: photo.url, isThumbnail: false }
+    }
+
+    async function deletePhotoFromDB(photoId, storagePath) {
+      if (storagePath) await sb.storage.from('journal-photos').remove([storagePath])
+      await sb.from('journal_photos').delete().eq('id', photoId)
+    }
+
+    async function saveBundleToDB(name, places) {
+      const user = currentUser.value
+      if (!user) return
+      const { data, error } = await sb.from('saved_bundles')
+        .insert({ user_id: user.id, name, places }).select().single()
+      if (error) { console.error('saveBundle', error); return null }
+      return { _id: data.id, name: data.name, places: data.places }
+    }
+
+    async function deleteBundleFromDB(bundleId) {
+      await sb.from('saved_bundles').delete().eq('id', bundleId)
+    }
+
+    // ── Sync helper: 로컬 trips 배열 변경 → DB에 반영 ──
+    async function syncTrip() {
+      if (!currentTrip.value) return
+      await saveTripToDB(currentTrip.value)
+    }
+    // 기존 saveTrips 대체: 메모리 + DB 동기화
+    async function saveTrips() {
+      // 현재 열린 trip만 DB에 저장 (빈번한 호출 대응용 디바운스)
+      if (currentTrip.value && currentUser.value) {
+        await saveTripToDB(currentTrip.value)
+      }
+    }
+
+    // ── 마이그레이션 ─────────────────────────────
+    const showMigrateModal = ref(false)
+    const migrateStep = ref('ask') // ask | progress | done
+    const migratePercent = ref(0)
+    const migrateStatus = ref('')
+    const migrateResult = ref('')
+    const localTripCount = ref(0)
+    const localBundleCount = ref(0)
+
+    function checkLocalMigration() {
+      const localTrips = JSON.parse(localStorage.getItem('trips') || '[]')
+      const localBundles = JSON.parse(localStorage.getItem('savedTagBundles') || '[]')
+      if (localTrips.length > 0 || localBundles.length > 0) {
+        localTripCount.value = localTrips.length
+        localBundleCount.value = localBundles.length
+        migrateStep.value = 'ask'
+        showMigrateModal.value = true
+      }
+    }
+    function skipMigration() { showMigrateModal.value = false }
+    async function startMigration() {
+      migrateStep.value = 'progress'
+      const localTrips = JSON.parse(localStorage.getItem('trips') || '[]')
+      const localBundles = JSON.parse(localStorage.getItem('savedTagBundles') || '[]')
+      const total = localTrips.length + localBundles.length
+      let done = 0
+      const user = currentUser.value
+
+      for (const trip of localTrips) {
+        migrateStatus.value = `여행: ${trip.name}`
+        const dbTrip = {
+          user_id: user.id, name: trip.name,
+          destination: trip.destination, dest_address: trip.destAddress,
+          flag: trip.flag, center_lat: trip.centerLat, center_lng: trip.centerLng,
+          start_date: trip.startDate, end_date: trip.endDate,
+          theme: trip.theme, days: trip.days,
+          day_colors: trip.dayColors, thumbnail: null,
+        }
+        const { data: newTrip, error } = await sb.from('trips').insert(dbTrip).select().single()
+        if (error) { console.error('migrate trip', error); continue }
+
+        // pins — ID 매핑 필요 (old→new)
+        const pinIdMap = {}
+        for (const pin of (trip.pins || [])) {
+          const dbPin = {
+            trip_id: newTrip.id, type: pin.type, name: pin.name,
+            address: pin.address, lat: pin.lat, lng: pin.lng,
+            category: pin.category, rating: pin.rating,
+            place_id: pin.placeId, sort_order: pin.order || 0,
+            day: pin.day || 0, visit_time: pin.visitTime,
+            memo: pin.memo, reservation_url: pin.reservationUrl,
+          }
+          const { data: newPin } = await sb.from('pins').insert(dbPin).select().single()
+          if (newPin) pinIdMap[pin.id] = newPin.id
+        }
+
+        // routes
+        for (const route of (trip.routes || [])) {
+          await sb.from('routes').insert({
+            trip_id: newTrip.id,
+            from_pin_id: pinIdMap[route.fromPinId] || null,
+            to_pin_id: pinIdMap[route.toPinId] || null,
+            transport: route.transport, duration: route.duration,
+            distance: route.distance, memo: route.memo,
+          })
+        }
+
+        // journal + photos (base64→Storage)
+        for (let dayIdx = 0; dayIdx < (trip.journal || []).length; dayIdx++) {
+          const entry = trip.journal[dayIdx]
+          if (!entry) continue
+          const { data: journal } = await sb.from('journals')
+            .insert({ trip_id: newTrip.id, day_index: dayIdx, text: entry.text || '' })
+            .select().single()
+          if (!journal) continue
+          for (const base64 of (entry.photos || [])) {
+            try {
+              const [header, data64] = base64.split(',')
+              const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg'
+              const binary = atob(data64)
+              const array = new Uint8Array(binary.length)
+              for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i)
+              const blob = new Blob([array], { type: mime })
+              const path = `${user.id}/${newTrip.id}/${dayIdx}/${Date.now()}-${Math.random().toString(36).slice(2,6)}.jpg`
+              await sb.storage.from('journal-photos').upload(path, blob)
+              const { data: urlData } = await sb.storage.from('journal-photos').createSignedUrl(path, 60*60*24*365)
+              const isTh = trip.thumbnail === base64
+              await sb.from('journal_photos').insert({
+                journal_id: journal.id, storage_path: path,
+                url: urlData?.signedUrl || '', is_thumbnail: isTh,
+              })
+              if (isTh) {
+                await sb.from('trips').update({ thumbnail: urlData?.signedUrl }).eq('id', newTrip.id)
+              }
+            } catch(e) { console.warn('migrate photo failed', e) }
+          }
+        }
+        done++
+        migratePercent.value = Math.round((done / total) * 100)
+      }
+
+      // bundles
+      for (const bundle of localBundles) {
+        migrateStatus.value = `꾸러미: ${bundle.name}`
+        await sb.from('saved_bundles').insert({
+          user_id: user.id, name: bundle.name, places: bundle.places
+        })
+        done++
+        migratePercent.value = Math.round((done / total) * 100)
+      }
+
+      migrateResult.value = `여행 ${localTrips.length}개, 꾸러미 ${localBundles.length}개 저장 완료`
+      migrateStep.value = 'done'
+    }
+    function finishMigration() {
+      localStorage.removeItem('trips')
+      localStorage.removeItem('savedTagBundles')
+      showMigrateModal.value = false
+      loadTripsFromDB()
+    }
+    const sideTab = ref('schedule')
+    const selectedPinType = ref('confirmed')
+    const detailTab = ref('map')
+    const trips = ref([])
+    const currentTrip = ref(null)
+    function confirmedCount(t) { return (t.pins||[]).filter(p=>p.type!=='wish').length }
+
+    // ── Journal helpers ─────────────────────────────
+    function getJournalEntry(dayIdx) {
+      const trip=currentTrip.value
+      if (!trip) return {text:'',photos:[]}
+      if (!trip.journal) trip.journal=[]
+      if (!trip.journal[dayIdx]) trip.journal[dayIdx]={text:'',photos:[]}
+      return trip.journal[dayIdx]
+    }
+    const journalEditDays = ref({})
+    function toggleJournalEdit(dayIdx) { journalEditDays.value[dayIdx]=!journalEditDays.value[dayIdx] }
+    function renderMarkdown(text) {
+      if(!text) return ''
+      try {
+        const m=window.marked
+        if(m){
+          const parse=m.parse||m.marked?.parse
+          if(parse) return parse(text,{breaks:true})
+        }
+      } catch(e){ console.warn('marked error',e) }
+      return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')
+    }
+    function getJournalText(dayIdx) { return getJournalEntry(dayIdx).text }
+    function setJournalText(dayIdx,text) {
+      getJournalEntry(dayIdx).text=text
+      if (currentTrip.value?.id) saveJournalTextToDB(currentTrip.value.id, dayIdx, text)
+    }
+    function getJournalPhotos(dayIdx) { return getJournalEntry(dayIdx).photos||[] }
+    function pickJournalPhoto(dayIdx) { document.getElementById('journal-photo-'+dayIdx)?.click() }
+    async function onJournalPhotoSelected(dayIdx,e) {
+      const files=[...e.target.files]; if(!files.length)return
+      const entry=getJournalEntry(dayIdx)
+      if(!entry.photos) entry.photos=[]
+      for (const file of files) {
+        const photo = await uploadPhotoToDB(currentTrip.value.id, dayIdx, file)
+        if (photo) entry.photos.push(photo)
+      }
+      e.target.value=''
+    }
+    async function removeJournalPhoto(dayIdx,photoIdx) {
+      const entry=getJournalEntry(dayIdx)
+      const photo=entry.photos[photoIdx]
+      if (photo?._id) await deletePhotoFromDB(photo._id, photo._path)
+      if(currentTrip.value?.thumbnail===photo?.url) {
+        currentTrip.value.thumbnail=null
+        await saveTripToDB(currentTrip.value)
+      }
+      entry.photos.splice(photoIdx,1)
+    }
+    function tripCoverPhoto(trip) {
+      if(trip.thumbnail) return trip.thumbnail
+      if(!trip.journal) return null
+      for(const entry of trip.journal){ if(entry?.photos?.length) { const p=entry.photos[0]; return p.url||p } }
+      return null
+    }
+    function tripAllPhotos(trip) {
+      if(!trip.journal) return []
+      const all=[]
+      trip.journal.forEach(e=>{ if(e?.photos) all.push(...e.photos) })
+      return all
+    }
+    function tripFullText(trip) {
+      if(!trip.journal) return ''
+      return trip.journal.filter(e=>e?.text).map(e=>e.text).join('\n\n')
+    }
+    function tripSummaryText(trip) {
+      const full=tripFullText(trip)
+      return full.length>200?full.slice(0,200)+'...':full
+    }
+    function setTripThumbnail(photo) {
+      if(!currentTrip.value) return
+      currentTrip.value.thumbnail=(currentTrip.value.thumbnail===photo)?null:photo
+      saveTrips()
+    }
+    const tripsWithStory = computed(()=>trips.value.filter(t=>tripCoverPhoto(t)||tripFullText(t)).reverse())
+
+    // Feed carousel & expand state
+    const feedPhotoIdx = ref({})
+    const feedExpanded = ref({})
+    function feedPrev(trip) {
+      const photos=tripAllPhotos(trip); if(photos.length<=1) return
+      const cur=feedPhotoIdx.value[trip.id]||0
+      feedPhotoIdx.value[trip.id]=cur<=0?photos.length-1:cur-1
+    }
+    function feedNext(trip) {
+      const photos=tripAllPhotos(trip); if(photos.length<=1) return
+      const cur=feedPhotoIdx.value[trip.id]||0
+      feedPhotoIdx.value[trip.id]=cur>=photos.length-1?0:cur+1
+    }
+    function openTripJournal(trip) { currentTrip.value=trip; detailTab.value='journal'; view.value='map'; nextTick(()=>initMap()) }
+
+    // ── Maps API ──────────────────────────────────
+    let mapsLoaded=false,mapsLoading=false
+    const mapsQueue=[]
+    function loadMapsApi(cb) {
+      if (mapsLoaded){cb&&cb();return}
+      if (cb) mapsQueue.push(cb)
+      if (mapsLoading) return
+      mapsLoading=true
+      const key=localStorage.getItem('gmaps_key')
+      if (!key) return
+      const s=document.createElement('script')
+      s.src=`https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&language=ko`
+      s.onload=()=>{mapsLoaded=true;mapsLoading=false;mapsQueue.forEach(f=>f());mapsQueue.length=0}
+      document.head.appendChild(s)
+    }
+    function saveApiKey() {
+      if (!apiKeyInput.value.trim()) return alert('Maps API 키를 입력해주세요.')
+      localStorage.setItem('gmaps_key',apiKeyInput.value.trim())
+      view.value='shelf'
+      nextTick(()=>{ loadMapsApi() })
+    }
+
+    // ── 개발자 설정 모달 ──────────────────────────────
+    const showSettingsModal = ref(false)
+    const settingsApiKey = ref(localStorage.getItem('gmaps_key')||'')
+    function saveSettings() {
+      if (!settingsApiKey.value.trim()) return alert('Maps API 키를 입력해주세요.')
+      localStorage.setItem('gmaps_key',settingsApiKey.value.trim())
+      if (newDevPassword.value.trim()) {
+        localStorage.setItem(DEV_PASSWORD_KEY, newDevPassword.value.trim())
+      }
+      showSettingsModal.value=false
+      if (view.value==='setup') view.value='shelf'
+      nextTick(()=>{ loadMapsApi() })
+    }
+    onMounted(()=>{
+      if (localStorage.getItem('gmaps_key')) loadMapsApi()
+    })
+
+    // ── Day 날짜 ──────────────────────────────────
+    function dayDate(dayIdx) {
+      const s = currentTrip.value?.startDate
+      if (!s) return null
+      const d = new Date(s); d.setDate(d.getDate()+dayIdx)
+      return d.toISOString().slice(0,10)
+    }
+
+    // ── 여행 모달 ─────────────────────────────────
+    const showTripModal=ref(false)
+    const tripModalMode=ref('create')
+    const tripForm=ref({id:null,name:'',destination:'',destAddress:'',flag:'',centerLat:null,centerLng:null,startDate:'',endDate:'',themeIdx:0})
+    let destAC=null
+
+    function openNewTripModal() {
+      tripModalMode.value='create'
+      tripForm.value={id:null,name:'',destination:'',destAddress:'',flag:'',centerLat:null,centerLng:null,startDate:'',endDate:'',themeIdx:0}
+      showTripModal.value=true
+      nextTick(()=>{
+        const inp=document.getElementById('new-trip-dest-input')
+        if(inp) inp.value=''
+        initDestAC()
+      })
+    }
+    function openEditTripModal(trip) {
+      tripModalMode.value='edit'
+      const ti=THEMES.findIndex(t=>t.cover===trip.theme.cover)
+      tripForm.value={id:trip.id,name:trip.name,destination:trip.destination,destAddress:trip.destAddress||'',flag:trip.flag,centerLat:trip.centerLat||null,centerLng:trip.centerLng||null,startDate:trip.startDate,endDate:trip.endDate,themeIdx:ti>=0?ti:0}
+      showTripModal.value=true
+      nextTick(()=>{const inp=document.getElementById('new-trip-dest-input');if(inp)inp.value=trip.destination;initDestAC()})
+    }
+    function initDestAC() {
+      if (!window.google){loadMapsApi(()=>nextTick(initDestAC));return}
+      const inp=document.getElementById('new-trip-dest-input'); if (!inp) return
+      destAC=new google.maps.places.Autocomplete(inp,{types:['(regions)']})
+      destAC.addListener('place_changed',()=>{
+        const place=destAC.getPlace(); if (!place.geometry) return
+        const comps=place.address_components||[]
+        const cc=comps.find(c=>c.types.includes('country'))
+        const loc=comps.find(c=>c.types.includes('locality')||c.types.includes('administrative_area_level_1'))
+        tripForm.value.flag=cc?countryCodeToFlag(cc.short_name):guessFlag(place.name)
+        tripForm.value.destination=(loc?loc.long_name+', ':'')+(cc?cc.long_name:place.name)
+        tripForm.value.destAddress=place.formatted_address||''
+        tripForm.value.centerLat=place.geometry.location.lat()
+        tripForm.value.centerLng=place.geometry.location.lng()
+        inp.value=tripForm.value.destination
+      })
+    }
+    function closeTripModal(){showTripModal.value=false;destAC=null}
+    watch(showTripModal,v=>{if(!v)destAC=null})
+
+    async function saveTripModal() {
+      if (!tripForm.value.name) return alert('여행 이름을 입력해주세요.')
+      if (!tripForm.value.destination) return alert('목적지를 검색해서 선택해주세요.')
+      const flag=tripForm.value.flag||guessFlag(tripForm.value.destination)||'✈️'
+      const numDays=calcDays(tripForm.value.startDate,tripForm.value.endDate)
+      if (tripModalMode.value==='create') {
+        const trip={_isNew:true, name:tripForm.value.name,destination:tripForm.value.destination,destAddress:tripForm.value.destAddress,flag,centerLat:tripForm.value.centerLat,centerLng:tripForm.value.centerLng,startDate:tripForm.value.startDate,endDate:tripForm.value.endDate,theme:THEMES[tripForm.value.themeIdx],pins:[],routes:[],days:numDays,dayColors:[],journal:[]}
+        const newId = await saveTripToDB(trip)
+        if (newId) {
+          trip.id = newId; delete trip._isNew
+          trips.value.push(trip); closeTripModal(); openTrip(trip)
+        }
+      } else {
+        const idx=trips.value.findIndex(t=>t.id===tripForm.value.id); if (idx<0) return
+        const ex=trips.value[idx]
+        trips.value[idx]={...ex,name:tripForm.value.name,destination:tripForm.value.destination,destAddress:tripForm.value.destAddress,flag,centerLat:tripForm.value.centerLat??ex.centerLat,centerLng:tripForm.value.centerLng??ex.centerLng,startDate:tripForm.value.startDate,endDate:tripForm.value.endDate,theme:THEMES[tripForm.value.themeIdx],days:numDays}
+        await saveTripToDB(trips.value[idx]); closeTripModal()
+      }
+    }
+    async function deleteTrip() {
+      if (!confirm('이 여행을 삭제할까요?')) return
+      await deleteTripFromDB(tripForm.value.id)
+      trips.value=trips.value.filter(t=>t.id!==tripForm.value.id); closeTripModal()
+    }
+
+    // ── 지도 ──────────────────────────────────────
+    let map=null,markers=[],polylines=[],placeAC=null,poiIW=null
+    const mapTheme=ref('sketch')
+    const showColorPanel=ref(false)
+
+    function toggleMapTheme(){
+      if(!map)return
+      mapTheme.value=mapTheme.value==='normal'?'sketch':'normal'
+      if(mapTheme.value==='sketch'){
+        map.setOptions({styles:SKETCH_STYLE})
+        nextTick(()=>fitAllPins())
+      } else {
+        map.setOptions({styles:[]})
+      }
+    }
+
+    function openTrip(trip) { currentTrip.value=trip; detailTab.value='map'; view.value='map'; nextTick(()=>initMap()) }
+    function initMap() { if (!window.google){loadMapsApi(()=>nextTick(buildMap));return}; buildMap() }
+    function buildMap() {
+      const trip=currentTrip.value
+      const center=(trip.centerLat&&trip.centerLng)?{lat:trip.centerLat,lng:trip.centerLng}:{lat:37.5665,lng:126.9780}
+      map=new google.maps.Map(document.getElementById('map-canvas'),{
+        center,zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,
+        styles:mapTheme.value==='sketch'?SKETCH_STYLE:[]
+      })
+      map.addListener('click',e=>{
+        if (!e.placeId) return; e.stop()
+        new google.maps.places.PlacesService(map).getDetails(
+          {placeId:e.placeId,fields:['name','formatted_address','rating','user_ratings_total','types','geometry','place_id','photos','website']},
+          (place,status)=>{ if (status===google.maps.places.PlacesServiceStatus.OK) showPoiInfoWindow(place,e.latLng) }
+        )
+      })
+      const inp=document.getElementById('place-search')
+      if (inp){placeAC=new google.maps.places.Autocomplete(inp);placeAC.addListener('place_changed',()=>addPinFromPlace(placeAC.getPlace()))}
+      renderAllPins(); renderAllRoutes(); nextTick(()=>fitAllPins())
+    }
+
+    function buildIWContent(opts) {
+      // opts: {photoUrl,name,address,rating,reviewCount,cat,website,buttons}
+      const s=`font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif`
+      const photo=opts.photoUrl?`<img src="${opts.photoUrl}" style="width:100%;height:120px;object-fit:cover;border-radius:6px;margin-bottom:8px;display:block">`:'';
+      const rating=opts.rating?`<span style="color:#FBBC04">★</span> ${opts.rating}${opts.reviewCount?' <span style="color:#aaa">(${opts.reviewCount})</span>':''}`:''
+      const web=opts.website?`<a href="${opts.website}" target="_blank" style="font-size:10px;color:#4f46e5;text-decoration:none">🔗 웹사이트</a>`:''
+      const catHtml=opts.cat?`<span style="color:#777">${opts.cat}</span>`:''
+      const meta=[rating,catHtml].filter(Boolean).join(' · ')
+      return `<div style="${s};padding:2px;min-width:200px;max-width:280px">
+        ${photo}
+        <div style="font-size:13px;font-weight:700;margin-bottom:3px;color:#1a1917">${opts.name}</div>
+        <div style="font-size:10px;color:#999;margin-bottom:5px">${opts.address||''}</div>
+        ${meta?`<div style="font-size:10px;margin-bottom:6px">${meta}</div>`:''}
+        ${web?`<div style="margin-bottom:8px">${web}</div>`:''}
+        <div style="display:flex;gap:6px">${opts.buttons}</div>
+      </div>`
+    }
+    function showPoiInfoWindow(place,latLng) {
+      if (!poiIW) poiIW=new google.maps.InfoWindow()
+      const types=place.types||[]
+      const catMap={restaurant:'🍽️ 식당',lodging:'🏨 숙소',tourist_attraction:'🏛️ 관광지',museum:'🏛️ 박물관',park:'🌳 공원',shopping_mall:'🛍️ 쇼핑',airport:'✈️ 공항',transit_station:'🚇 교통'}
+      const cat=catMap[types.find(t=>catMap[t])]||''
+      const photoUrl=place.photos?.length?place.photos[0].getUrl({maxWidth:300}):''
+      poiIW.setContent(buildIWContent({
+        photoUrl, name:place.name, address:place.formatted_address||'',
+        rating:place.rating, reviewCount:place.user_ratings_total, cat, website:place.website,
+        buttons:`<button id="poi-wish" style="flex:1;padding:6px;background:#EEF2FF;color:#4f46e5;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🏷️ 태그</button>
+          <button id="poi-conf" style="flex:1;padding:6px;background:#FFF7ED;color:#c2410c;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📍 일정</button>`
+      }))
+      poiIW.setPosition(latLng); poiIW.open(map)
+      google.maps.event.addListenerOnce(poiIW,'domready',()=>{
+        document.getElementById('poi-wish')?.addEventListener('click',()=>{addPoiAsPin(place,'wish');poiIW.close()})
+        document.getElementById('poi-conf')?.addEventListener('click',()=>{addPoiAsPin(place,'confirmed');poiIW.close()})
+      })
+    }
+    async function addPoiAsPin(place,type) {
+      const trip=currentTrip.value; if (!trip) return
+      const types=place.types||[]
+      const catMap={restaurant:'식당',lodging:'숙소',tourist_attraction:'관광지',museum:'박물관',park:'공원',shopping_mall:'쇼핑',airport:'공항',transit_station:'교통'}
+      const category=catMap[types.find(t=>catMap[t])]||'기타'
+      const dayPins=trip.pins.filter(p=>p.type!=='wish'&&p.day===0)
+      const pin={_isNew:true,type,name:place.name,address:place.formatted_address||'',rating:place.rating||null,category,lat:place.geometry.location.lat(),lng:place.geometry.location.lng(),placeId:place.place_id,order:type!=='wish'?(dayPins.length>0?Math.max(...dayPins.map(p=>p.order||0)):0)+1:null,day:0,visitTime:'',memo:'',reservationUrl:''}
+      const newId = await savePinToDB(trip.id, pin)
+      if (newId) { pin.id = newId; delete pin._isNew }
+      trip.pins.push(pin)
+      renderAllPins(); renderAllRoutes()
+      if(type==='wish'){
+        // 태그 등록 → 말풍선으로 바로 보여주기
+        nextTick(()=>showPinInfoWindow(pin))
+      } else {
+        // 일정 등록 → 편집 모달
+        openPinModal(pin)
+      }
+    }
+
+    function renderAllPins() { markers.forEach(m=>m.setMap(null));markers=[];if (!map||!currentTrip.value)return;currentTrip.value.pins.forEach(p=>renderPin(p)) }
+    const TAG_COLORS={
+      '식당':'#e85d4a','카페':'#a0694b','숙소':'#5c6bc0','관광지':'#00897b','박물관':'#6d4c8a',
+      '공원':'#43a047','쇼핑':'#d84e9e','공항':'#546e7a','교통':'#607d8b','해변':'#0097a7',
+      '액티비티':'#f4511e','기타':'#4f46e5'
+    }
+    function pinIcon(pin) {
+      if (pin.type==='wish') {
+        const color=TAG_COLORS[pin.category]||'#4f46e5'
+        const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="30" viewBox="0 0 24 30"><path d="M3 2h18v25l-9-6-9 6z" fill="${color}" fill-opacity="0.88" stroke="white" stroke-width="2" stroke-linejoin="round"/><text x="12" y="16" text-anchor="middle" font-size="11">${categoryEmoji(pin.category)}</text></svg>`
+        return {url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(24,30),anchor:new google.maps.Point(12,30)}
+      }
+      const color=pin.type==='done'?'#78909C':dayColor(pin.day??0)
+      return {path:google.maps.SymbolPath.CIRCLE,scale:14,fillColor:color,fillOpacity:pin.type==='done'?.6:1,strokeColor:'#fff',strokeWeight:2.5}
+    }
+    function renderPin(pin) {
+      const m=new google.maps.Marker({position:{lat:pin.lat,lng:pin.lng},map,title:pin.name,icon:pinIcon(pin),zIndex:pin.type==='wish'?1:pin.type==='done'?2:3,label:pin.type!=='wish'&&pin.order?{text:String(pin.order),color:'#fff',fontWeight:'bold',fontSize:'10px'}:null})
+      m.addListener('click',()=>{if(poiIW)poiIW.close();showPinInfoWindow(pin)}); markers.push(m)
+    }
+    function showPinInfoWindow(pin) {
+      if(!poiIW) poiIW=new google.maps.InfoWindow()
+      const cat=categoryEmoji(pin.category)+' '+(pin.category||'')
+      const isWish=pin.type==='wish'
+      const memoLine=pin.memo?`📝 ${pin.memo.replace(/</g,'&lt;').slice(0,50)}${pin.memo.length>50?'...':''}`:''
+      const timeLine=pin.visitTime?`🕐 Day${(pin.day||0)+1} ${pin.visitTime}`:''
+      const extra=[memoLine,timeLine].filter(Boolean).map(t=>`<div style="font-size:10px;color:#888;margin-bottom:4px">${t}</div>`).join('')
+
+      const buttons=isWish
+        ?`<button id="pin-iw-schedule" style="flex:1;padding:6px;background:#FFF7ED;color:#c2410c;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📍 일정</button>
+          <button id="pin-iw-del" style="padding:6px 10px;background:#fce8e6;color:#ea4335;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">삭제</button>`
+        :`<button id="pin-iw-edit" style="flex:1;padding:6px;background:#f0f0f0;color:#1a1917;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏️ 수정</button>
+          <button id="pin-iw-del" style="padding:6px 10px;background:#fce8e6;color:#ea4335;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">삭제</button>`
+
+      // placeId가 있으면 사진+웹사이트 조회
+      function render(photoUrl,website,reviewCount){
+        poiIW.setContent(buildIWContent({
+          photoUrl, name:pin.name, address:pin.address||'',
+          rating:pin.rating, reviewCount, cat, website,
+          buttons:`${extra}${buttons}`
+        }))
+        poiIW.setPosition({lat:pin.lat,lng:pin.lng}); poiIW.open(map)
+        google.maps.event.addListenerOnce(poiIW,'domready',bindPinIWButtons)
+      }
+      function bindPinIWButtons(){
+        document.getElementById('pin-iw-schedule')?.addEventListener('click',()=>{
+          poiIW.close()
+          const p={...pin}; p.type='confirmed'
+          editPin.value=p; pinModalStep.value='edit'; showPinModal.value=true
+        })
+        document.getElementById('pin-iw-edit')?.addEventListener('click',()=>{
+          poiIW.close(); openPinModal(pin)
+        })
+        document.getElementById('pin-iw-del')?.addEventListener('click',()=>{
+          poiIW.close()
+          if(!confirm('이 핀을 삭제할까요?'))return
+          if(!currentTrip.value)return
+          currentTrip.value.pins=currentTrip.value.pins.filter(p=>p.id!==pin.id)
+          currentTrip.value.routes=currentTrip.value.routes.filter(r=>r.fromPinId!==pin.id&&r.toPinId!==pin.id)
+          saveTrips();renderAllPins();renderAllRoutes()
+        })
+      }
+      if(!map){ render('','',null); return }
+      if(pin.placeId){
+        // placeId로 직접 조회
+        new google.maps.places.PlacesService(map).getDetails(
+          {placeId:pin.placeId,fields:['photos','website','user_ratings_total','rating']},
+          (detail,status)=>{
+            if(status===google.maps.places.PlacesServiceStatus.OK&&detail){
+              if(!pin.rating&&detail.rating){ pin.rating=detail.rating; saveTrips() }
+              render(detail.photos?.length?detail.photos[0].getUrl({maxWidth:300}):'',detail.website,detail.user_ratings_total)
+            } else render('','',null)
+          }
+        )
+      } else {
+        // placeId 없으면 이름으로 검색해서 보완
+        new google.maps.places.PlacesService(map).findPlaceFromQuery(
+          {query:pin.name,fields:['place_id','photos','website','user_ratings_total','rating','formatted_address'],locationBias:{lat:pin.lat,lng:pin.lng}},
+          (results,status)=>{
+            if(status===google.maps.places.PlacesServiceStatus.OK&&results?.length){
+              const d=results[0]
+              // placeId 보완 저장
+              if(d.place_id&&currentTrip.value){
+                const idx=currentTrip.value.pins.findIndex(p=>p.id===pin.id)
+                if(idx>=0){
+                  currentTrip.value.pins[idx].placeId=d.place_id
+                  if(!pin.rating&&d.rating) currentTrip.value.pins[idx].rating=d.rating
+                  if(!pin.address&&d.formatted_address) currentTrip.value.pins[idx].address=d.formatted_address
+                  saveTrips()
+                }
+              }
+              render(d.photos?.length?d.photos[0].getUrl({maxWidth:300}):'',d.website,d.user_ratings_total)
+            } else render('','',null)
+          }
+        )
+      }
+    }
+    function renderAllRoutes() {
+      polylines.forEach(p=>p.setMap(null)); polylines=[]
+      if (!map||!currentTrip.value) return
+      const trip=currentTrip.value
+      const byDay={}
+      trip.pins.filter(p=>p.type!=='wish').forEach(p=>{
+        const d=p.day??0
+        if(!byDay[d]) byDay[d]=[]
+        byDay[d].push(p)
+      })
+      Object.entries(byDay).forEach(([ds,pins])=>{
+        const dayIdx=parseInt(ds)
+        const sorted=[...pins].sort((a,b)=>(a.order||0)-(b.order||0))
+        const col=dayColor(dayIdx)
+        for(let i=0;i<sorted.length-1;i++){
+          const from=sorted[i],to=sorted[i+1]
+          const lineCol=(from.type==='done'||to.type==='done')?'#78909C':col
+          const poly=new google.maps.Polyline({
+            path:[{lat:from.lat,lng:from.lng},{lat:to.lat,lng:to.lng}],
+            geodesic:true,strokeColor:lineCol,strokeOpacity:.75,strokeWeight:6,
+            icons:[{icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:3,strokeColor:lineCol,strokeWeight:2},offset:'100%'}],
+            map
+          })
+          let route=trip.routes.find(r=>r.fromPinId===from.id&&r.toPinId===to.id)
+          poly.addListener('click',()=>{
+            if(!route){
+              route={id:Date.now().toString(),fromPinId:from.id,toPinId:to.id,fromName:from.name,toName:to.name,day:dayIdx,transport:'walk',duration:'',distance:'',memo:''}
+              trip.routes.push(route); saveTrips()
+            }
+            openLineMemo(route)
+          })
+          polylines.push(poly)
+          const lm=makeRouteLabelMarker(from,to,route,lineCol)
+          if(lm) polylines.push(lm)
+        }
+      })
+      // 숙소 → 다음날 첫 일정 점선
+      const dayKeys=Object.keys(byDay).map(Number).sort((a,b)=>a-b)
+      dayKeys.forEach(dayIdx=>{
+        const sorted=[...byDay[dayIdx]].sort((a,b)=>(a.order||0)-(b.order||0))
+        const last=sorted[sorted.length-1]
+        if(!last||last.category!=='숙소')return
+        const nextDay=dayIdx+1
+        if(!byDay[nextDay])return
+        const nextSorted=[...byDay[nextDay]].sort((a,b)=>(a.order||0)-(b.order||0))
+        const first=nextSorted[0]; if(!first)return
+        const dashPoly=new google.maps.Polyline({
+          path:[{lat:last.lat,lng:last.lng},{lat:first.lat,lng:first.lng}],
+          geodesic:true,strokeColor:'#9E9E9E',strokeOpacity:0,strokeWeight:3,
+          icons:[{icon:{path:'M 0,-1 0,1',strokeOpacity:.7,strokeColor:'#9E9E9E',scale:3},offset:'0',repeat:'14px'}],
+          map
+        })
+        polylines.push(dashPoly)
+      })
+    }
+    function makeRouteLabelMarker(from,to,route,lineCol) {
+      if(!route) return null
+      const tLabel={walk:'도보',car:'차량',subway:'지하철',bus:'버스',flight:'항공',ship:'선박'}[route.transport]||''
+      const parts=[tLabel,route.duration,route.distance].filter(Boolean)
+      if(!parts.length) return null
+      const text=parts.join(' · ')
+      const w=Math.max(50,text.length*7+18)
+      const esc=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="22"><rect rx="11" width="${w}" height="22" fill="white" opacity="0.93"/><rect rx="11" width="${w}" height="22" fill="none" stroke="${lineCol}" stroke-width="1.5"/><text x="${w/2}" y="15" text-anchor="middle" font-size="10" font-family="Arial,sans-serif" fill="${lineCol}" font-weight="600">${esc}</text></svg>`
+      const midLat=(from.lat+to.lat)/2,midLng=(from.lng+to.lng)/2
+      return new google.maps.Marker({
+        position:{lat:midLat,lng:midLng},map,
+        icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(w,22),anchor:new google.maps.Point(w/2,11)},
+        zIndex:5,clickable:false
+      })
+    }
+    function fitAllPins() {
+      if (!map||!currentTrip.value) return
+      const cpins=currentTrip.value.pins.filter(p=>p.type!=='wish')
+      if (cpins.length===0) return
+      const bounds=new google.maps.LatLngBounds()
+      cpins.forEach(p=>bounds.extend({lat:p.lat,lng:p.lng}))
+      map.fitBounds(bounds,{top:80,bottom:40,left:40,right:40})
+    }
+    async function addPinFromPlace(place) {
+      if (!place.geometry||!currentTrip.value) return
+      const trip=currentTrip.value
+      const types=place.types||[]
+      const catMap={restaurant:'식당',lodging:'숙소',tourist_attraction:'관광지',museum:'박물관',park:'공원',shopping_mall:'쇼핑',airport:'공항',transit_station:'교통'}
+      const category=catMap[types.find(t=>catMap[t])]||'기타'
+      const dayPins=trip.pins.filter(p=>p.type!=='wish'&&p.day===0)
+      const pin={_isNew:true,type:selectedPinType.value,name:place.name,address:place.formatted_address||'',rating:place.rating||null,category,lat:place.geometry.location.lat(),lng:place.geometry.location.lng(),placeId:place.place_id,order:selectedPinType.value!=='wish'?(dayPins.length>0?Math.max(...dayPins.map(p=>p.order||0)):0)+1:null,day:0,visitTime:'',memo:'',reservationUrl:''}
+      const newId = await savePinToDB(trip.id, pin)
+      if (newId) { pin.id = newId; delete pin._isNew }
+      trip.pins.push(pin)
+      renderAllPins(); renderAllRoutes()
+      map.panTo({lat:pin.lat,lng:pin.lng}); document.getElementById('place-search').value=''; openPinModal(pin)
+    }
+
+    const days=computed(()=>{ if (!currentTrip.value)return[]; return Array.from({length:currentTrip.value.days||1},(_,i)=>i) })
+    function addDay(){if(!currentTrip.value)return;currentTrip.value.days=(currentTrip.value.days||1)+1;saveTrips()}
+    function deleteDay(dayIdx) {
+      if (!currentTrip.value)return
+      const n=currentTrip.value.days||1
+      if (n<=1)return alert('최소 1개의 Day가 필요합니다.')
+      if (!confirm(`Day ${dayIdx+1}을 삭제할까요?\n해당 Day의 핀들은 Day 1로 이동됩니다.`))return
+      currentTrip.value.pins.forEach(p=>{if(p.day===dayIdx)p.day=0;else if(p.day>dayIdx)p.day--})
+      currentTrip.value.routes.forEach(r=>{if(r.day===dayIdx)r.day=0;else if(r.day>dayIdx)r.day--})
+      currentTrip.value.days=n-1; saveTrips(); renderAllPins(); renderAllRoutes()
+    }
+    function dayColor(idx){
+      const custom=currentTrip.value?.dayColors?.[idx]
+      return custom||DAY_COLORS[idx%DAY_COLORS.length]
+    }
+    function setDayColor(idx,color){
+      if(!currentTrip.value)return
+      if(!currentTrip.value.dayColors)currentTrip.value.dayColors=[]
+      currentTrip.value.dayColors[idx]=color
+      saveTrips();renderAllPins();renderAllRoutes()
+    }
+
+    const confirmedPins=computed(()=>(currentTrip.value?.pins||[]).filter(p=>p.type!=='wish'))
+    const wishPins=computed(()=>(currentTrip.value?.pins||[]).filter(p=>p.type==='wish'))
+    const confirmedByDay=computed(()=>days.value.map((_,i)=>confirmedPins.value.filter(p=>p.day===i).sort((a,b)=>a.order-b.order)))
+    const summaryRows=computed(()=>[
+      {label:'총 장소',value:(currentTrip.value?.pins?.length||0)+'곳'},
+      {label:'일정',value:confirmedPins.value.length+'곳'},
+      {label:'태그',value:wishPins.value.length+'곳'},
+      {label:'방문 완료',value:(currentTrip.value?.pins||[]).filter(p=>p.type==='done').length+'곳'},
+      {label:'총 Day',value:(currentTrip.value?.days||1)+'Day'},
+    ])
+
+    // 완료 토글 (사이드 패널)
+    // 다중 선택 삭제
+    const selectMode=ref(false)
+    const selectedPinIds=ref([])
+    function toggleSelectPin(id){
+      const i=selectedPinIds.value.indexOf(id)
+      if(i>=0) selectedPinIds.value.splice(i,1)
+      else selectedPinIds.value.push(id)
+    }
+    function selectAllSchedule(){
+      selectedPinIds.value=confirmedPins.value.map(p=>p.id)
+    }
+    function selectAllWish(){
+      selectedPinIds.value=wishPins.value.map(p=>p.id)
+    }
+    function deleteSelectedPins(){
+      if(!currentTrip.value||!selectedPinIds.value.length)return
+      if(!confirm(`${selectedPinIds.value.length}개 핀을 삭제할까요?`))return
+      const ids=new Set(selectedPinIds.value)
+      currentTrip.value.pins=currentTrip.value.pins.filter(p=>!ids.has(p.id))
+      currentTrip.value.routes=currentTrip.value.routes.filter(r=>!ids.has(r.fromPinId)&&!ids.has(r.toPinId))
+      selectedPinIds.value=[]; selectMode.value=false
+      saveTrips();renderAllPins();renderAllRoutes()
+    }
+
+    function togglePinDone(pin) {
+      if(!currentTrip.value) return
+      const idx=currentTrip.value.pins.findIndex(p=>p.id===pin.id); if(idx<0)return
+      currentTrip.value.pins[idx].type = pin.type==='done' ? 'confirmed' : 'done'
+      saveTrips(); renderAllPins(); renderAllRoutes()
+    }
+
+    // 핀 모달
+    const showPinModal=ref(false),editPin=ref(null),pinModalStep=ref('info')
+    const pinTypes=[{val:'wish',label:'태그',icon:'🏷️',color:'#4f46e5'},{val:'confirmed',label:'일정',icon:'📍',color:'#FF6B35'},{val:'done',label:'완료',icon:'🟢',color:'#34A853'}]
+    const categoryList=CATEGORY_LIST
+    function categoryEmoji(cat){return CATEGORY_MAP[cat]||'📍'}
+    const orderOptions=computed(()=>{
+      if (!editPin.value||!currentTrip.value)return[]
+      const sibs=currentTrip.value.pins.filter(p=>p.type!=='wish'&&p.day===editPin.value.day&&p.id!==editPin.value.id).sort((a,b)=>a.order-b.order)
+      const opts=sibs.map(p=>({val:p.order,label:`${p.order}번 (${p.name.slice(0,10)})`}))
+      const maxO=sibs.length>0?Math.max(...sibs.map(p=>p.order||0)):0
+      const newO=maxO+1; if (!opts.find(o=>o.val===newO)) opts.push({val:newO,label:`${newO}번 (마지막)`})
+      return opts.sort((a,b)=>a.val-b.val)
+    })
+    function onPinDayChange() {
+      if (!editPin.value||!currentTrip.value)return
+      const sibs=currentTrip.value.pins.filter(p=>p.type!=='wish'&&p.day===editPin.value.day&&p.id!==editPin.value.id)
+      editPin.value.order=(sibs.length>0?Math.max(...sibs.map(p=>p.order||0)):0)+1
+    }
+    function openPinModal(pin) {
+      const p={...pin}
+      if (p.visitDatetime&&!p.visitTime){p.visitTime=p.visitDatetime.includes('T')?p.visitDatetime.split('T')[1].slice(0,5):'';delete p.visitDatetime}
+      editPin.value=p; pinModalStep.value='info'; showPinModal.value=true
+    }
+    async function savePin() {
+      if (!currentTrip.value||!editPin.value)return
+      const p={...editPin.value}
+      if(p.type!=='wish'){
+        if(!p.order||p.order<=0){
+          const sibs=currentTrip.value.pins.filter(q=>q.type!=='wish'&&q.day===p.day&&q.id!==p.id)
+          p.order=(sibs.length>0?Math.max(...sibs.map(q=>q.order||0)):0)+1
+        }
+        if(p.day===undefined||p.day===null) p.day=0
+      }
+      const newId = await savePinToDB(currentTrip.value.id, p)
+      if (newId && !p.id) p.id = newId
+      const idx=currentTrip.value.pins.findIndex(q=>q.id===p.id)
+      if (idx>=0)currentTrip.value.pins[idx]=p
+      showPinModal.value=false
+      editPin.value=null
+      renderAllPins(); renderAllRoutes()
+      if (p.type!=='wish'&&map) nextTick(()=>fitAllPins())
+    }
+    async function deletePin() {
+      if (!currentTrip.value||!editPin.value)return
+      if (!confirm('이 핀을 삭제할까요?'))return
+      await deletePinFromDB(editPin.value.id)
+      currentTrip.value.pins=currentTrip.value.pins.filter(p=>p.id!==editPin.value.id)
+      // 관련 routes도 삭제
+      const delRoutes = currentTrip.value.routes.filter(r=>r.fromPinId===editPin.value.id||r.toPinId===editPin.value.id)
+      for (const r of delRoutes) await deleteRouteFromDB(r.id)
+      currentTrip.value.routes=currentTrip.value.routes.filter(r=>r.fromPinId!==editPin.value.id&&r.toPinId!==editPin.value.id)
+      renderAllPins(); renderAllRoutes(); showPinModal.value=false
+    }
+
+    // 라인 메모
+    const showLineMemo=ref(false),editRoute=ref(null)
+    const transportTypes=[{val:'walk',icon:'🚶',label:'도보'},{val:'car',icon:'🚗',label:'차량'},{val:'subway',icon:'🚇',label:'지하철'},{val:'bus',icon:'🚌',label:'버스'},{val:'flight',icon:'✈️',label:'항공'},{val:'ship',icon:'🚢',label:'선박'}]
+    function openLineMemo(route){editRoute.value={...route};showLineMemo.value=true}
+    function saveRoute(){if(!currentTrip.value||!editRoute.value)return;const idx=currentTrip.value.routes.findIndex(r=>r.id===editRoute.value.id);if(idx>=0)currentTrip.value.routes[idx]={...editRoute.value};saveTrips();renderAllRoutes();showLineMemo.value=false}
+
+    // 임포트 (2-step: 파일선택 → 미리보기 → 일회성/저장)
+    const showImportGuide=ref(false)
+    const importStep=ref('select') // 'select' | 'preview'
+    const importPreviewPlaces=ref([])
+    const importProgress=ref(0)
+    const importTotal=ref(0)
+    const importBundleName=ref('')
+    const savedBundles=ref([])
+
+    function closeImportGuide(){ showImportGuide.value=false; importStep.value='select'; importPreviewPlaces.value=[]; importBundleName.value='' }
+
+    function pickImportFile(){
+      nextTick(()=>document.getElementById('import-file').click())
+    }
+    function importFile(e) {
+      const file=e.target.files[0]; if (!file)return
+      const fname=file.name.toLowerCase()
+      const reader=new FileReader()
+      reader.onload=async ev=>{
+        let places=[]
+        if(fname.endsWith('.csv')){
+          importStep.value='loading'
+          places=await parseGoogleCSV(ev.target.result)
+        } else if(fname.endsWith('.kml')){
+          places=parseKMLText(ev.target.result)
+        } else {
+          places=parseGoogleJSONToPlaces(ev.target.result)
+        }
+        if(!places||!places.length){ importStep.value='select'; alert('장소를 찾지 못했어요.'); return }
+        importPreviewPlaces.value=places
+        importBundleName.value=''
+        importStep.value='preview'
+      }
+      reader.readAsText(file); e.target.value=''
+    }
+
+    // Google Maps 저장 목록 CSV 파싱 (제목,메모,URL,태그,댓글)
+    async function parseGoogleCSV(text) {
+      const lines=text.trim().split('\n').filter(l=>l.trim())
+      if(lines.length<2) return []
+      const places=[]
+      const rows=lines.slice(1).filter(l=>l.trim()&&l!==',,,,')
+      // CSV → 장소명 + URL 추출
+      const parsed=rows.map(line=>{
+        // 간단한 CSV 파싱 (콤마 구분, 따옴표 고려)
+        const cols=[]
+        let cur='',inQ=false
+        for(const ch of line){
+          if(ch==='"'){inQ=!inQ}
+          else if(ch===','&&!inQ){cols.push(cur);cur=''}
+          else cur+=ch
+        }
+        cols.push(cur)
+        return {name:cols[0]?.trim()||'',memo:cols[1]?.trim()||'',url:cols[2]?.trim()||''}
+      }).filter(r=>r.name&&r.url)
+
+      if(!parsed.length) return []
+      if(!window.google||!map){ alert('지도가 로드된 상태에서 불러와주세요.'); return [] }
+
+      // Places API로 좌표 조회
+      const service=new google.maps.places.PlacesService(map)
+      let resolved=0
+      const total=parsed.length
+      importProgress.value=0; importTotal.value=total
+
+      const catMap={restaurant:'식당',lodging:'숙소',tourist_attraction:'관광지',museum:'박물관',park:'공원',shopping_mall:'쇼핑',airport:'공항',transit_station:'교통',cafe:'카페',bar:'카페',beach:'해변',amusement_park:'액티비티'}
+      for(const item of parsed){
+        try {
+          const result=await new Promise((ok,fail)=>{
+            service.findPlaceFromQuery({query:item.name,fields:['name','formatted_address','geometry','place_id','types','rating','photos']},
+              (results,status)=>{
+                if(status===google.maps.places.PlacesServiceStatus.OK&&results?.length) ok(results[0])
+                else fail(status)
+              })
+          })
+          const types=result.types||[]
+          const category=catMap[types.find(t=>catMap[t])]||'기타'
+          places.push({
+            name:item.name,
+            lat:result.geometry.location.lat(),
+            lng:result.geometry.location.lng(),
+            address:result.formatted_address||'',
+            placeId:result.place_id||null,
+            category,
+            rating:result.rating||null,
+            memo:item.memo
+          })
+        } catch(e){ /* 못 찾은 장소 건너뜀 */ }
+        resolved++
+        importProgress.value=resolved
+      }
+      return places
+    }
+
+    function loadSavedBundle(bundle){
+      importPreviewPlaces.value=bundle.places
+      importBundleName.value=bundle.name
+      importStep.value='bundle'
+    }
+    async function deleteSavedBundle(name){
+      if(!confirm(`"${name}" 꾸러미를 삭제할까요?`))return
+      const bundle = savedBundles.value.find(b=>b.name===name)
+      if (bundle?._id) await deleteBundleFromDB(bundle._id)
+      savedBundles.value=savedBundles.value.filter(b=>b.name!==name)
+    }
+
+    function confirmImport(mode){
+      if(mode==='save'){
+        if(!importBundleName.value.trim()){ alert('꾸러미 이름을 입력해주세요.'); return }
+        const exists=savedBundles.value.find(b=>b.name===importBundleName.value.trim())
+        if(exists){ if(!confirm(`"${importBundleName.value}" 이름이 이미 있습니다. 덮어쓸까요?`)) return; savedBundles.value=savedBundles.value.filter(b=>b.name!==importBundleName.value.trim()) }
+        const newBundle = await saveBundleToDB(importBundleName.value.trim(), importPreviewPlaces.value)
+        if (newBundle) savedBundles.value.push(newBundle)
+        else savedBundles.value.push({ name:importBundleName.value.trim(), places:importPreviewPlaces.value })
+      }
+      addImportedPins(importPreviewPlaces.value)
+      closeImportGuide()
+    }
+    function parseKMLText(text) {
+      const doc=new DOMParser().parseFromString(text,'text/xml')
+      const places=[]
+      doc.querySelectorAll('Placemark').forEach(pm=>{
+        const name=pm.querySelector('name')?.textContent?.trim()||'알 수 없음'
+        const coordStr=pm.querySelector('coordinates')?.textContent?.trim()
+        if (!coordStr)return
+        const [lngS,latS]=coordStr.split(',')
+        const lat=parseFloat(latS),lng=parseFloat(lngS)
+        const addr=pm.querySelector('address')?.textContent?.trim()||''
+        if (!isNaN(lat)&&!isNaN(lng)) places.push({name,lat,lng,address:addr})
+      })
+      return places
+    }
+    function parseGoogleJSONToPlaces(text) {
+      try {
+        const data=JSON.parse(text); const places=[]
+        ;(data.features||[]).forEach(f=>{
+          const p=f.properties||{}
+          const loc=p.location||p.Location||{}
+          const title=p.Title||p.name||loc.name||loc.Name||''
+          const address=loc.address||loc.Address||p.address||''
+          const geo=loc['Geo Coordinates']||p['Geo Coordinates']
+          let lat,lng
+          if (geo){lat=parseFloat(geo.Latitude||geo.latitude);lng=parseFloat(geo.Longitude||geo.longitude)}
+          else if (f.geometry?.type==='Point'){[lng,lat]=f.geometry.coordinates}
+          if (!isNaN(lat)&&!isNaN(lng)&&title) places.push({name:title,lat,lng,address})
+        })
+        return places
+      } catch(e) { console.error(e); return [] }
+    }
+    function addImportedPins(places) {
+      if (!currentTrip.value||!places.length)return
+      const trip=currentTrip.value
+      const existing=new Set(trip.pins.map(p=>`${p.lat.toFixed(5)},${p.lng.toFixed(5)}`))
+      let added=0
+      places.forEach(p=>{
+        const key=`${p.lat.toFixed(5)},${p.lng.toFixed(5)}`
+        if (existing.has(key))return
+        trip.pins.push({id:Date.now().toString()+Math.random().toString(36).slice(2),type:'wish',name:p.name,address:p.address||'',rating:p.rating||null,category:p.category||'기타',lat:p.lat,lng:p.lng,placeId:p.placeId||null,order:null,day:0,visitTime:'',memo:p.memo||'',reservationUrl:''})
+        existing.add(key); added++
+      })
+      saveTrips(); renderAllPins(); sideTab.value='wish'
+      alert(`${added}개 장소가 태그에 추가되었어요!`)
+    }
+
+    function focusPin(pin){if(!map)return;map.panTo({lat:pin.lat,lng:pin.lng});map.setZoom(16)}
+    function focusPinWithInfo(pin){
+      if(!map)return
+      map.panTo({lat:pin.lat,lng:pin.lng});map.setZoom(16)
+      nextTick(()=>showPinInfoWindow(pin))
+    }
+
+    // ── 드래그 앤 드롭 ────────────────────────────
+    const dragPin=ref(null),dragOverPin=ref(null),dragOverDay=ref(null)
+    function startDrag(pin){dragPin.value=pin}
+    function endDrag(){dragPin.value=null;dragOverPin.value=null;dragOverDay.value=null}
+    function _reorderDay(trip,dayIdx,excludeId){
+      return trip.pins.filter(p=>p.type!=='wish'&&p.day===dayIdx&&p.id!==excludeId).sort((a,b)=>(a.order||0)-(b.order||0))
+    }
+    function dropOnPin(targetPin,targetDayIdx){
+      if(!dragPin.value||!currentTrip.value||dragPin.value.id===targetPin.id){dragPin.value=null;return}
+      const trip=currentTrip.value
+      const src=trip.pins.find(p=>p.id===dragPin.value.id); if(!src){dragPin.value=null;return}
+      const oldDay=src.day
+      if(oldDay!==targetDayIdx){
+        const old=_reorderDay(trip,oldDay,src.id); old.forEach((p,i)=>p.order=i+1)
+      }
+      src.day=targetDayIdx
+      const nd=_reorderDay(trip,targetDayIdx,src.id)
+      const at=nd.findIndex(p=>p.id===targetPin.id)
+      nd.splice(at>=0?at:nd.length,0,src)
+      nd.forEach((p,i)=>p.order=i+1)
+      saveTrips();renderAllPins();renderAllRoutes();dragPin.value=null
+    }
+    function dropOnDay(targetDayIdx,toEnd){
+      if(!dragPin.value||!currentTrip.value){dragPin.value=null;return}
+      const trip=currentTrip.value
+      const src=trip.pins.find(p=>p.id===dragPin.value.id); if(!src){dragPin.value=null;return}
+      const oldDay=src.day
+      if(oldDay!==targetDayIdx){
+        const old=_reorderDay(trip,oldDay,src.id); old.forEach((p,i)=>p.order=i+1)
+      }
+      const nd=_reorderDay(trip,targetDayIdx,src.id)
+      src.day=targetDayIdx
+      src.order=nd.length+1
+      saveTrips();renderAllPins();renderAllRoutes();dragPin.value=null
+    }
+
+    // ── 사이드 패널 리사이즈 ────────────────────────
+    const sidePanel = ref(null)
+    function startSideResize(e) {
+      e.preventDefault()
+      const panel=document.querySelector('.side-panel'); if(!panel)return
+      const startX=e.clientX, startW=panel.offsetWidth
+      function onMove(ev){
+        const diff=startX-ev.clientX
+        const newW=Math.min(500,Math.max(220,startW+diff))
+        panel.style.width=newW+'px'
+      }
+      function onUp(){ document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp) }
+      document.addEventListener('mousemove',onMove)
+      document.addEventListener('mouseup',onUp)
+    }
+
+    return {
+      view,currentUser,showUserMenu,signInWithGoogle,signOut,
+      showMigrateModal,migrateStep,migratePercent,migrateStatus,migrateResult,
+      localTripCount,localBundleCount,skipMigration,startMigration,finishMigration,
+      apiKeyInput,saveApiKey,
+      showDevPasswordModal,devPassword,devPasswordError,showDevLogin,verifyDevPassword,
+      showSettingsModal,settingsApiKey,newDevPassword,saveSettings,
+      trips,currentTrip,confirmedCount,openTrip,detailTab,
+      THEMES,showTripModal,tripModalMode,tripForm,openNewTripModal,openEditTripModal,closeTripModal,saveTripModal,deleteTrip,calcDays,
+      mapTheme,toggleMapTheme,showColorPanel,
+      sideTab,selectedPinType,days,addDay,deleteDay,dayColor,setDayColor,dayDate,
+      confirmedPins,wishPins,confirmedByDay,summaryRows,
+      selectMode,selectedPinIds,toggleSelectPin,selectAllSchedule,selectAllWish,deleteSelectedPins,
+      togglePinDone,
+      showPinModal,editPin,pinModalStep,pinTypes,categoryList,categoryEmoji,orderOptions,onPinDayChange,openPinModal,savePin,deletePin,
+      showLineMemo,editRoute,transportTypes,openLineMemo,saveRoute,
+      showImportGuide,importStep,importPreviewPlaces,importBundleName,importProgress,importTotal,savedBundles,
+      closeImportGuide,pickImportFile,importFile,loadSavedBundle,deleteSavedBundle,confirmImport,
+      fitAllPins,focusPin,focusPinWithInfo,
+      dragPin,dragOverPin,dragOverDay,startDrag,endDrag,dropOnPin,dropOnDay,
+      sidePanel,startSideResize,
+      tripCoverPhoto,tripSummaryText,tripAllPhotos,tripFullText,tripsWithStory,setTripThumbnail,
+      feedPhotoIdx,feedExpanded,feedPrev,feedNext,openTripJournal,
+      journalEditDays,toggleJournalEdit,renderMarkdown,
+      getJournalText,setJournalText,getJournalPhotos,pickJournalPhoto,onJournalPhotoSelected,removeJournalPhoto,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
