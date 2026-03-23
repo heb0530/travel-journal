@@ -2195,7 +2195,7 @@ createApp({
       savedBundles.value=savedBundles.value.filter(b=>b.name!==name)
     }
 
-    function confirmImport(mode){
+    async function confirmImport(mode){
       if(mode==='save'){
         if(!importBundleName.value.trim()){ alert('꾸러미 이름을 입력해주세요.'); return }
         const exists=savedBundles.value.find(b=>b.name===importBundleName.value.trim())
