@@ -1,5 +1,6 @@
 docs/
 *.csv
-*.json
-!package.json
+나고야.csv
+리뷰.json
+라벨이 지정된 장소.json
 .bkit/

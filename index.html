@@ -348,6 +348,31 @@
       .mobile-side-toggle { display:flex !important; }
       .map-wrapper { width:100% !important; }
     }
+    /* ── 공유 ── */
+    .share-btn { padding:5px 14px; border:1px solid var(--border); border-radius:6px; background:#fff; font-size:.8rem; cursor:pointer; }
+    .share-btn:hover { border-color:var(--ink); }
+    .visibility-options { display:flex; flex-direction:column; gap:8px; margin:12px 0; }
+    .vis-option { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; transition:all .15s; }
+    .vis-option.active { border-color:var(--ink); background:#f8f8f5; }
+    .vis-option-icon { font-size:1.2rem; }
+    .vis-option-text { flex:1; }
+    .vis-option-title { font-size:.88rem; font-weight:600; }
+    .vis-option-desc { font-size:.75rem; color:var(--muted); }
+    .share-link-box { display:flex; gap:6px; margin:8px 0 16px; }
+    .share-link-input { flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:.8rem; background:#f8f8f5; color:var(--ink-2); }
+    .invite-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #f5f5f0; font-size:.85rem; }
+    .invite-row .email { flex:1; }
+    .invite-input-row { display:flex; gap:6px; margin-top:12px; }
+    .invite-input-row input { flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:.85rem; }
+    .share-badge { position:absolute; top:8px; right:8px; padding:2px 8px; border-radius:10px; font-size:.65rem; font-weight:700; }
+    .badge-public { background:#E8F5E9; color:#2E7D32; }
+    .badge-invite { background:#E3F2FD; color:#1565C0; }
+    .bundle-explore-tab { display:flex; gap:0; margin-bottom:12px; }
+    .bundle-tab { flex:1; padding:8px; text-align:center; border:none; background:none; font-size:.82rem; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; color:var(--muted); }
+    .bundle-tab.active { color:var(--ink); border-bottom-color:var(--ink); }
+    .bundle-public-item { padding:12px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; }
+    .bundle-public-meta { font-size:.75rem; color:var(--muted); margin-top:4px; }
+
     .mobile-side-toggle { display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:99; padding:10px 24px; background:var(--ink); color:#fff; border:none; border-radius:24px; font-size:.85rem; font-weight:700; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.25); }
   </style>
 </head>
@@ -471,6 +496,26 @@
       </div>
     </div>
 
+    <!-- 공유된 여행 -->
+    <div class="trips-section" v-if="sharedTrips.length>0">
+      <div class="section-header">
+        <span class="section-title">공유된 여행</span>
+      </div>
+      <div class="trips-grid">
+        <div class="trip-card-wrap" v-for="trip in sharedTrips" :key="'s-'+trip.id">
+          <div class="trip-card" @click="openSharedTrip(trip)" :style="trip.theme?.cover?{background:trip.theme.cover}:{}">
+            <img v-if="tripCoverPhoto(trip)" :src="tripCoverPhoto(trip)" class="trip-card-img" />
+            <div class="trip-card-body">
+              <div class="trip-card-flag">{{ trip.flag }}</div>
+              <div class="trip-card-name">{{ trip.name }}</div>
+              <div class="trip-card-dest" v-if="trip.destination">{{ trip.destination }}</div>
+            </div>
+            <span class="share-badge" :class="trip._shareRole==='editor'?'badge-invite':'badge-public'">{{ trip._shareRole==='editor'?'✏️ 편집':'👁️ 읽기' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- editorial feed -->
     <div class="editorial-feed" v-if="tripsWithStory.length>0">
       <div class="feed-header">
@@ -542,8 +587,11 @@
         <div class="detail-topbar-dest">{{ currentTrip.destination }} · {{ currentTrip.startDate }}~{{ currentTrip.endDate }}</div>
       </div>
       <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="share-btn" @click="openShareModal" v-if="canEdit">🔗 공유</button>
+        <span v-if="currentTrip.visibility==='public'" style="font-size:.7rem;padding:3px 8px;background:#E8F5E9;color:#2E7D32;border-radius:10px">🌐 전체 공개</span>
+        <span v-if="currentTrip.visibility==='invite'" style="font-size:.7rem;padding:3px 8px;background:#E3F2FD;color:#1565C0;border-radius:10px">👥 초대</span>
         <button class="btn btn-sm" :style="mapTheme==='sketch'?'background:var(--bg);color:var(--ink);border:1px solid var(--border)':'background:var(--ink);color:#fff'" @click="toggleMapTheme" title="지도 테마 변경">{{ mapTheme==='sketch'?'일반 지도':'일러스트' }}</button>
-        <button class="btn btn-sm" style="background:var(--bg);color:var(--ink);border:1px solid var(--border)" @click="showImportGuide=true">태그 꾸러미</button>
+        <button class="btn btn-sm" style="background:var(--bg);color:var(--ink);border:1px solid var(--border)" @click="showImportGuide=true" v-if="canEdit">태그 꾸러미</button>
         <input id="import-file" type="file" accept=".json,.kml,.csv" style="display:none" @change="importFile" />
         <button class="btn btn-sm btn-save" @click="fitAllPins">전체보기</button>
       </div>
@@ -892,10 +940,86 @@
     </div>
   </div>
 
+  <!-- 공유 설정 모달 -->
+  <div class="modal-overlay" :class="{open:showShareModal}">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-title">공유 설정<button class="modal-close" @click="showShareModal=false">✕</button></div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:.82rem;font-weight:600;margin-bottom:8px">공개 범위</div>
+        <div class="visibility-options">
+          <div class="vis-option" :class="{active:shareVisibility==='personal'}" @click="shareVisibility='personal'">
+            <span class="vis-option-icon">🔒</span>
+            <div class="vis-option-text"><div class="vis-option-title">나만 보기</div><div class="vis-option-desc">본인만 접근 가능</div></div>
+          </div>
+          <div class="vis-option" :class="{active:shareVisibility==='public'}" @click="shareVisibility='public'">
+            <span class="vis-option-icon">🌐</span>
+            <div class="vis-option-text"><div class="vis-option-title">전체 공개</div><div class="vis-option-desc">링크가 있는 누구나 읽기 가능</div></div>
+          </div>
+          <div class="vis-option" :class="{active:shareVisibility==='invite'}" @click="shareVisibility='invite'">
+            <span class="vis-option-icon">👥</span>
+            <div class="vis-option-text"><div class="vis-option-title">초대한 사람만</div><div class="vis-option-desc">초대한 사용자만 접근 (읽기/편집)</div></div>
+          </div>
+        </div>
+      </div>
+      <div v-if="shareVisibility!=='personal'" style="margin-bottom:16px">
+        <div style="font-size:.82rem;font-weight:600;margin-bottom:6px">공유 링크</div>
+        <div class="share-link-box">
+          <input class="share-link-input" :value="shareLink" readonly />
+          <button class="btn btn-sm btn-save" @click="copyShareLink">복사</button>
+        </div>
+      </div>
+      <div v-if="shareVisibility==='invite'">
+        <div style="font-size:.82rem;font-weight:600;margin-bottom:8px">초대된 사용자</div>
+        <div v-if="shareInvites.length===0" style="font-size:.82rem;color:var(--muted);margin-bottom:8px">아직 초대한 사용자가 없습니다</div>
+        <div class="invite-row" v-for="inv in shareInvites" :key="inv.id">
+          <span class="email">{{ inv.email }}</span>
+          <select style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:.78rem" :value="inv.role" @change="updateInviteRole(inv.id,$event.target.value)">
+            <option value="viewer">읽기</option>
+            <option value="editor">편집</option>
+          </select>
+          <button style="background:none;border:none;cursor:pointer;color:#ea4335;font-size:.9rem" @click="removeInvite(inv.id)">✕</button>
+        </div>
+        <div class="invite-input-row">
+          <input v-model="newInviteEmail" placeholder="이메일 입력..." @keyup.enter="inviteUser" />
+          <select v-model="newInviteRole" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:.82rem">
+            <option value="viewer">읽기</option>
+            <option value="editor">편집</option>
+          </select>
+          <button class="btn btn-sm btn-save" @click="inviteUser">초대</button>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:16px">
+        <button class="btn btn-cancel" @click="showShareModal=false">취소</button>
+        <button class="btn btn-save" @click="saveShareSettings">저장</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 태그 꾸러미 모달 -->
   <div class="modal-overlay" :class="{open:showImportGuide}">
     <div class="modal" style="max-width:520px">
       <div class="modal-title">태그 꾸러미<button class="modal-close" @click="closeImportGuide">✕</button></div>
+
+      <!-- 탐색 탭 -->
+      <div class="bundle-explore-tab" v-if="importStep==='select'||importStep==='explore'">
+        <button class="bundle-tab" :class="{active:importStep==='select'}" @click="importStep='select'">내 꾸러미</button>
+        <button class="bundle-tab" :class="{active:importStep==='explore'}" @click="importStep='explore';searchPublicBundles('')">🔍 탐색</button>
+      </div>
+
+      <!-- 공개 꾸러미 탐색 -->
+      <template v-if="importStep==='explore'">
+        <input class="form-input" v-model="bundleSearchQuery" placeholder="꾸러미 검색..." @input="searchPublicBundles(bundleSearchQuery)" style="margin-bottom:12px" />
+        <div v-if="publicBundles.length===0" style="text-align:center;color:var(--muted);font-size:.85rem;padding:20px 0">공개 꾸러미가 없습니다</div>
+        <div class="bundle-public-item" v-for="b in publicBundles" :key="b.id">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:600;font-size:.88rem">{{ b.name }}</div>
+              <div class="bundle-public-meta">by {{ b.owner_name || '익명' }} · {{ b.use_count || 0 }}회 사용 · {{ (b.places||[]).length }}곳</div>
+            </div>
+            <button class="btn btn-sm btn-save" @click="loadPublicBundle(b)">불러오기</button>
+          </div>
+        </div>
+      </template>
 
       <!-- Step 1: 파일 선택 또는 저장된 꾸러미 -->
       <template v-if="importStep==='select'">
@@ -1110,19 +1234,27 @@ createApp({
 
     // 세션 복원 + 상태 감시
     sb.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+      if (shareTokenFromURL) {
+        // 공유 링크 접속
+        if (session) currentUser.value = session.user
+        loadSharedTripByToken(shareTokenFromURL)
+      } else if (session) {
         currentUser.value = session.user
         view.value = 'shelf'
         loadTripsFromDB()
+        loadSharedTrips()
         checkLocalMigration()
       }
     })
     sb.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         currentUser.value = session.user
-        view.value = 'shelf'
-        loadTripsFromDB()
-        checkLocalMigration()
+        if (!shareTokenFromURL) {
+          view.value = 'shelf'
+          loadTripsFromDB()
+          loadSharedTrips()
+          checkLocalMigration()
+        }
       } else if (event === 'SIGNED_OUT') {
         currentUser.value = null
         view.value = 'login'
@@ -1157,12 +1289,14 @@ createApp({
     // camelCase ↔ snake_case 매핑
     function mapTripFromDB(row) {
       return {
-        id:row.id, name:row.name, destination:row.destination,
+        id:row.id, user_id:row.user_id, name:row.name, destination:row.destination,
         destAddress:row.dest_address, flag:row.flag,
         centerLat:row.center_lat, centerLng:row.center_lng,
         startDate:row.start_date, endDate:row.end_date,
         theme:row.theme||{}, days:row.days||1,
         dayColors:row.day_colors||[], thumbnail:row.thumbnail,
+        visibility:row.visibility||'personal', share_token:row.share_token,
+        owner_name:row.owner_name,
         pins:(row.pins||[]).map(mapPinFromDB),
         routes:(row.routes||[]).map(mapRouteFromDB),
         journal: buildJournalArray(row.journals||[], row.days||1),
@@ -1336,13 +1470,16 @@ createApp({
       await sb.from('journal_photos').delete().eq('id', photoId)
     }
 
-    async function saveBundleToDB(name, places) {
+    async function saveBundleToDB(name, places, visibility = 'personal') {
       const user = currentUser.value
       if (!user) return
       const { data, error } = await sb.from('saved_bundles')
-        .insert({ user_id: user.id, name, places }).select().single()
+        .insert({
+          user_id: user.id, name, places, visibility,
+          owner_name: user.user_metadata?.full_name || user.email,
+        }).select().single()
       if (error) { console.error('saveBundle', error); return null }
-      return { _id: data.id, name: data.name, places: data.places }
+      return { _id: data.id, name: data.name, places: data.places, visibility: data.visibility }
     }
 
     async function deleteBundleFromDB(bundleId) {
@@ -1482,6 +1619,143 @@ createApp({
       showMigrateModal.value = false
       loadTripsFromDB()
     }
+
+    // ── 공유 기능 ─────────────────────────────
+    const showShareModal = ref(false)
+    const shareVisibility = ref('personal')
+    const shareLink = ref('')
+    const shareInvites = ref([])
+    const newInviteEmail = ref('')
+    const newInviteRole = ref('viewer')
+    const sharedTrips = ref([])
+    const sharedTripRole = ref(null)
+
+    const canEdit = computed(() => {
+      if (!currentTrip.value) return false
+      if (currentTrip.value.user_id === currentUser.value?.id) return true
+      return sharedTripRole.value === 'editor'
+    })
+
+    async function openShareModal() {
+      const trip = currentTrip.value; if (!trip) return
+      shareVisibility.value = trip.visibility || 'personal'
+      shareLink.value = `${window.location.origin}/share/${trip.share_token}`
+      const { data } = await sb.from('trip_shares').select('*').eq('trip_id', trip.id)
+      shareInvites.value = data || []
+      showShareModal.value = true
+    }
+
+    async function saveShareSettings() {
+      const trip = currentTrip.value; if (!trip) return
+      trip.visibility = shareVisibility.value
+      trip.owner_name = currentUser.value?.user_metadata?.full_name || currentUser.value?.email
+      await sb.from('trips').update({
+        visibility: shareVisibility.value,
+        owner_name: trip.owner_name,
+      }).eq('id', trip.id)
+      showShareModal.value = false
+    }
+
+    function copyShareLink() {
+      navigator.clipboard.writeText(shareLink.value)
+      alert('링크가 복사되었습니다!')
+    }
+
+    async function inviteUser() {
+      const email = newInviteEmail.value.trim()
+      if (!email) return
+      const { data, error } = await sb.from('trip_shares').insert({
+        trip_id: currentTrip.value.id,
+        email,
+        role: newInviteRole.value,
+      }).select().single()
+      if (error) { alert('초대 실패: ' + error.message); return }
+      shareInvites.value.push(data)
+      newInviteEmail.value = ''
+    }
+
+    async function removeInvite(inviteId) {
+      await sb.from('trip_shares').delete().eq('id', inviteId)
+      shareInvites.value = shareInvites.value.filter(i => i.id !== inviteId)
+    }
+
+    async function updateInviteRole(inviteId, role) {
+      await sb.from('trip_shares').update({ role }).eq('id', inviteId)
+      const inv = shareInvites.value.find(i => i.id === inviteId)
+      if (inv) inv.role = role
+    }
+
+    async function loadSharedTrips() {
+      if (!currentUser.value) return
+      const { data } = await sb.from('trip_shares')
+        .select('trip_id, role')
+        .eq('user_id', currentUser.value.id)
+      if (!data?.length) { sharedTrips.value = []; return }
+      const tripIds = data.map(d => d.trip_id)
+      const roleMap = Object.fromEntries(data.map(d => [d.trip_id, d.role]))
+      const { data: trips2 } = await sb.from('trips')
+        .select('*, pins(*), routes(*), journals(*, journal_photos(*))')
+        .in('id', tripIds)
+      sharedTrips.value = (trips2 || []).map(t => ({
+        ...mapTripFromDB(t),
+        _shareRole: roleMap[t.id],
+        user_id: t.user_id,
+      }))
+    }
+
+    function openSharedTrip(trip) {
+      currentTrip.value = trip
+      sharedTripRole.value = trip._shareRole
+      detailTab.value = 'map'
+      view.value = 'map'
+      nextTick(() => initMap())
+    }
+
+    // 공유 링크 라우팅: /share/{token}
+    const shareMatch = window.location.pathname.match(/\/share\/(.+)/)
+    const shareTokenFromURL = shareMatch ? shareMatch[1] : null
+
+    async function loadSharedTripByToken(token) {
+      const { data, error } = await sb.from('trips')
+        .select('*, pins(*), routes(*), journals(*, journal_photos(*))')
+        .eq('share_token', token)
+        .single()
+      if (error || !data) { alert('공유 링크를 찾을 수 없습니다.'); return }
+      const trip = mapTripFromDB(data)
+      trip.user_id = data.user_id
+      trip.visibility = data.visibility
+      trip.owner_name = data.owner_name
+      currentTrip.value = trip
+      sharedTripRole.value = 'viewer'
+      detailTab.value = 'map'
+      view.value = 'map'
+      nextTick(() => { loadMapsApi(() => nextTick(buildMap)) })
+    }
+
+    // 꾸러미 탐색
+    const publicBundles = ref([])
+    const bundleSearchQuery = ref('')
+
+    async function searchPublicBundles(query) {
+      let q = sb.from('saved_bundles')
+        .select('*')
+        .eq('visibility', 'public')
+        .order('use_count', { ascending: false })
+        .limit(20)
+      if (query) q = q.ilike('name', `%${query}%`)
+      const { data } = await q
+      publicBundles.value = data || []
+    }
+
+    async function loadPublicBundle(bundle) {
+      importPreviewPlaces.value = bundle.places
+      importBundleName.value = bundle.name
+      importStep.value = 'bundle'
+      await sb.from('saved_bundles')
+        .update({ use_count: (bundle.use_count || 0) + 1 })
+        .eq('id', bundle.id)
+    }
+
     const sideTab = ref('schedule')
     const selectedPinType = ref('confirmed')
     const detailTab = ref('map')
@@ -2331,6 +2605,10 @@ createApp({
       apiKeyInput,saveApiKey,
       showDevPasswordModal,devPassword,devPasswordError,showDevLogin,verifyDevPassword,
       showSettingsModal,settingsApiKey,newDevPassword,saveSettings,
+      showShareModal,shareVisibility,shareLink,shareInvites,newInviteEmail,newInviteRole,
+      openShareModal,saveShareSettings,copyShareLink,inviteUser,removeInvite,updateInviteRole,
+      sharedTrips,sharedTripRole,canEdit,openSharedTrip,
+      publicBundles,bundleSearchQuery,searchPublicBundles,loadPublicBundle,
       trips,currentTrip,confirmedCount,openTrip,detailTab,
       THEMES,showTripModal,tripModalMode,tripForm,openNewTripModal,openEditTripModal,closeTripModal,saveTripModal,deleteTrip,calcDays,
       mapTheme,toggleMapTheme,showColorPanel,
