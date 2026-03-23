@@ -342,8 +342,13 @@
     }
     @media (max-width:480px) {
       .trips-grid { grid-template-columns:1fr; }
-      .side-panel { display:none; }
+      .side-panel { position:fixed; bottom:0; left:0; right:0; width:100% !important; max-width:100% !important; min-width:0; height:55vh; border-left:none; border-top:1px solid var(--border); border-radius:16px 16px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,.15); z-index:100; transform:translateY(100%); transition:transform .3s ease; }
+      .side-panel.mobile-open { transform:translateY(0); }
+      .side-resize-handle { display:none; }
+      .mobile-side-toggle { display:flex !important; }
+      .map-wrapper { width:100% !important; }
     }
+    .mobile-side-toggle { display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:99; padding:10px 24px; background:var(--ink); color:#fff; border:none; border-radius:24px; font-size:.85rem; font-weight:700; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.25); }
   </style>
 </head>
 <body>
@@ -566,7 +571,8 @@
             </div>
           </div>
         </div>
-        <div class="side-panel" ref="sidePanel">
+        <button class="mobile-side-toggle" @click="mobileSideOpen=!mobileSideOpen">{{ mobileSideOpen ? '▼ 지도 보기' : '▲ 일정 보기' }}</button>
+        <div class="side-panel" :class="{'mobile-open':mobileSideOpen}" ref="sidePanel">
           <div class="side-resize-handle" @mousedown="startSideResize"></div>
           <div class="side-tabs">
             <div class="side-tab" :class="{active:sideTab==='schedule'}" @click="sideTab='schedule'">📅 일정</div>
@@ -1084,6 +1090,7 @@ createApp({
     const currentUser = ref(null)
     const showUserMenu = ref(false)
     const isInAppBrowser = ref(/KAKAOTALK|NAVER|Instagram|FB_IAB|FBAN|Line/i.test(navigator.userAgent))
+    const mobileSideOpen = ref(false)
 
     // ── Auth ──────────────────────────────────────
     async function signInWithGoogle() {
@@ -2318,7 +2325,7 @@ createApp({
     }
 
     return {
-      view,currentUser,showUserMenu,isInAppBrowser,signInWithGoogle,signOut,
+      view,currentUser,showUserMenu,isInAppBrowser,mobileSideOpen,signInWithGoogle,signOut,
       showMigrateModal,migrateStep,migratePercent,migrateStatus,migrateResult,
       localTripCount,localBundleCount,skipMigration,startMigration,finishMigration,
       apiKeyInput,saveApiKey,
