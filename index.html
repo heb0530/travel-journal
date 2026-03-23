@@ -1949,10 +1949,14 @@ createApp({
       const flag=tripForm.value.flag||guessFlag(tripForm.value.destination)||'✈️'
       const numDays=calcDays(tripForm.value.startDate,tripForm.value.endDate)
       if (tripModalMode.value==='create') {
-        const trip={_isNew:true, name:tripForm.value.name,destination:tripForm.value.destination,destAddress:tripForm.value.destAddress,flag,centerLat:tripForm.value.centerLat,centerLng:tripForm.value.centerLng,startDate:tripForm.value.startDate,endDate:tripForm.value.endDate,theme:THEMES[tripForm.value.themeIdx],pins:[],routes:[],days:numDays,dayColors:[],journal:[]}
+        const trip={_isNew:true, user_id:currentUser.value?.id, name:tripForm.value.name,destination:tripForm.value.destination,destAddress:tripForm.value.destAddress,flag,centerLat:tripForm.value.centerLat,centerLng:tripForm.value.centerLng,startDate:tripForm.value.startDate,endDate:tripForm.value.endDate,theme:THEMES[tripForm.value.themeIdx],pins:[],routes:[],days:numDays,dayColors:[],journal:[],visibility:'personal'}
         const newId = await saveTripToDB(trip)
+        if (!newId) { alert('여행 저장에 실패했습니다. 다시 시도해주세요.'); return }
         if (newId) {
           trip.id = newId; delete trip._isNew
+          // share_token 가져오기
+          const { data:fresh } = await sb.from('trips').select('share_token').eq('id',newId).single()
+          if (fresh) trip.share_token = fresh.share_token
           trips.value.push(trip); closeTripModal(); openTrip(trip)
         }
       } else {
@@ -1984,7 +1988,7 @@ createApp({
       }
     }
 
-    function openTrip(trip) { currentTrip.value=trip; detailTab.value='map'; view.value='map'; nextTick(()=>initMap()) }
+    function openTrip(trip) { currentTrip.value=trip; sharedTripRole.value=null; detailTab.value='map'; view.value='map'; nextTick(()=>initMap()) }
     function initMap() { if (!window.google){loadMapsApi(()=>nextTick(buildMap));return}; buildMap() }
     function buildMap() {
       const trip=currentTrip.value
