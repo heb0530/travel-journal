@@ -202,6 +202,13 @@
     .pin-type-btn.active-wish { background:#4f46e5; color:#fff; border-color:#4f46e5; }
     .pin-type-btn.active-confirmed { background:#c2410c; color:#fff; border-color:#c2410c; }
 
+    /* 지도 필터 */
+    .map-filter-bar { position:absolute; bottom:12px; left:12px; z-index:5; display:flex; gap:4px; align-items:center; flex-wrap:wrap; max-width:calc(100% - 24px); }
+    .map-filter-chip { padding:5px 12px; border-radius:16px; font-size:.72rem; font-weight:600; cursor:pointer; border:1.5px solid rgba(0,0,0,.15); background:rgba(255,255,255,.92); color:var(--ink-2); transition:all .15s; backdrop-filter:blur(4px); box-shadow:0 1px 4px rgba(0,0,0,.1); }
+    .map-filter-chip:hover { background:#fff; border-color:var(--ink); }
+    .map-filter-chip.active { background:var(--ink); color:#fff; border-color:var(--ink); }
+    .map-filter-sep { color:rgba(0,0,0,.2); font-size:.7rem; padding:0 2px; }
+
     /* 사이드 패널 */
     .side-panel { width:300px; min-width:220px; max-width:500px; background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; position:relative; }
     .side-resize-handle { position:absolute; top:0; left:-4px; width:8px; height:100%; cursor:col-resize; z-index:5; }
@@ -619,10 +626,22 @@
               <span class="search-icon">🔍</span>
               <input id="place-search" class="search-input" placeholder="장소 검색 후 핀 추가..." />
             </div>
-            <div class="pin-type-btns">
+            <div class="pin-type-btns" v-if="canEdit">
               <button class="pin-type-btn wish" :class="selectedPinType==='wish'?'active-wish':''" @click="selectedPinType='wish'">🏷️ 태그</button>
               <button class="pin-type-btn confirmed" :class="selectedPinType==='confirmed'?'active-confirmed':''" @click="selectedPinType='confirmed'">📍 일정</button>
             </div>
+          </div>
+          <!-- 지도 필터 -->
+          <div class="map-filter-bar">
+            <button class="map-filter-chip" :class="{active:mapFilter==='all'}" @click="setMapFilter('all')">전체</button>
+            <button class="map-filter-chip" :class="{active:mapFilter==='wish'}" @click="setMapFilter('wish')">🏷️ 태그</button>
+            <button class="map-filter-chip" :class="{active:mapFilter==='schedule'}" @click="setMapFilter('schedule')">📍 일정</button>
+            <span class="map-filter-sep">|</span>
+            <button class="map-filter-chip" :class="{active:mapDayFilter===-1}" @click="setMapDayFilter(-1)">전체 Day</button>
+            <button class="map-filter-chip" v-for="(_,i) in days" :key="'df'+i"
+              :class="{active:mapDayFilter===i}"
+              :style="mapDayFilter===i?{background:dayColor(i),color:'#fff',borderColor:dayColor(i)}:{}"
+              @click="setMapDayFilter(i)">Day {{ i+1 }}</button>
           </div>
         </div>
         <button class="mobile-side-toggle" @click="mobileSideOpen=!mobileSideOpen">{{ mobileSideOpen ? '▼ 지도 보기' : '▲ 일정 보기' }}</button>
@@ -2215,6 +2234,11 @@ createApp({
     // ── 지도 ──────────────────────────────────────
     let map=null,markers=[],polylines=[],placeAC=null,poiIW=null
     const mapTheme=ref('sketch')
+    const mapFilter=ref('all') // 'all' | 'wish' | 'schedule'
+    const mapDayFilter=ref(-1) // -1 = all, 0,1,2... = specific day
+
+    function setMapFilter(f) { mapFilter.value=f; renderAllPins(); renderAllRoutes() }
+    function setMapDayFilter(d) { mapDayFilter.value=d; renderAllPins(); renderAllRoutes() }
     const showColorPanel=ref(false)
 
     function toggleMapTheme(){
@@ -2228,7 +2252,7 @@ createApp({
       }
     }
 
-    function openTrip(trip) { currentTrip.value=trip; sharedTripRole.value=null; detailTab.value='map'; view.value='map'; nextTick(()=>initMap()) }
+    function openTrip(trip) { currentTrip.value=trip; sharedTripRole.value=null; mapFilter.value='all'; mapDayFilter.value=-1; detailTab.value='map'; view.value='map'; nextTick(()=>initMap()) }
     function initMap() { if (!window.google){loadMapsApi(()=>nextTick(buildMap));return}; buildMap() }
     function buildMap() {
       const trip=currentTrip.value
@@ -2304,7 +2328,15 @@ createApp({
       }
     }
 
-    function renderAllPins() { markers.forEach(m=>m.setMap(null));markers=[];if (!map||!currentTrip.value)return;currentTrip.value.pins.forEach(p=>renderPin(p)) }
+    function shouldShowPin(p) {
+      // 타입 필터
+      if (mapFilter.value==='wish' && p.type!=='wish') return false
+      if (mapFilter.value==='schedule' && p.type==='wish') return false
+      // Day 필터 (태그는 Day 없으므로 항상 표시, 일정만 Day 필터 적용)
+      if (mapDayFilter.value>=0 && p.type!=='wish' && p.day!==mapDayFilter.value) return false
+      return true
+    }
+    function renderAllPins() { markers.forEach(m=>m.setMap(null));markers=[];if (!map||!currentTrip.value)return;currentTrip.value.pins.filter(shouldShowPin).forEach(p=>renderPin(p)) }
     const TAG_COLORS={
       '식당':'#e85d4a','카페':'#a0694b','숙소':'#5c6bc0','관광지':'#00897b','박물관':'#6d4c8a',
       '공원':'#43a047','쇼핑':'#d84e9e','공항':'#546e7a','교통':'#607d8b','해변':'#0097a7',
@@ -2410,8 +2442,12 @@ createApp({
         if(!byDay[d]) byDay[d]=[]
         byDay[d].push(p)
       })
+      // 태그만 보기 모드에서는 라인 숨김
+      if (mapFilter.value==='wish') return
       Object.entries(byDay).forEach(([ds,pins])=>{
         const dayIdx=parseInt(ds)
+        // Day 필터 적용
+        if (mapDayFilter.value>=0 && dayIdx!==mapDayFilter.value) return
         const sorted=[...pins].sort((a,b)=>(a.order||0)-(b.order||0))
         const col=dayColor(dayIdx)
         for(let i=0;i<sorted.length-1;i++){
@@ -2901,7 +2937,7 @@ createApp({
       recRegion,recCategory,recCategories,recResults,recLoading,recProgress,recTotal,recCatEmoji,fetchRecommendations,recApplyAsTags,recSaveAsBundle,
       trips,currentTrip,confirmedCount,themeStyle,openTrip,detailTab,
       THEMES,showTripModal,tripModalMode,tripForm,openNewTripModal,openEditTripModal,closeTripModal,saveTripModal,deleteTrip,calcDays,
-      mapTheme,toggleMapTheme,showColorPanel,
+      mapTheme,toggleMapTheme,showColorPanel,mapFilter,mapDayFilter,setMapFilter,setMapDayFilter,
       sideTab,selectedPinType,days,addDay,deleteDay,dayColor,setDayColor,dayDate,
       confirmedPins,wishPins,filteredWishPins,wishSearchQuery,wishCategoryFilter,wishCategoryFilters,
       showSaveTagBundle,tagBundleName,tagBundleVisibility,saveTagsAsBundle,
