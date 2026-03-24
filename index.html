@@ -2240,8 +2240,20 @@ createApp({
     const mapFilter=ref('all') // 'all' | 'wish' | 'schedule'
     const mapDayFilter=ref(-1) // -1 = all, 0,1,2... = specific day
 
-    function setMapFilter(f) { mapFilter.value=f; renderAllPins(); renderAllRoutes(); fitFilteredPins() }
+    function setMapFilter(f) {
+      mapFilter.value=f; renderAllPins(); renderAllRoutes()
+      if (f==='wish') panToFilteredPins()
+      else fitFilteredPins()
+    }
     function setMapDayFilter(d) { mapDayFilter.value=d; renderAllPins(); renderAllRoutes(); fitFilteredPins() }
+    function panToFilteredPins() {
+      if (!map||!currentTrip.value) return
+      const visible = currentTrip.value.pins.filter(shouldShowPin)
+      if (visible.length===0) return
+      const bounds = new google.maps.LatLngBounds()
+      visible.forEach(p => bounds.extend({lat:p.lat,lng:p.lng}))
+      map.panTo(bounds.getCenter())
+    }
     function fitFilteredPins() {
       if (!map||!currentTrip.value) return
       const visible = currentTrip.value.pins.filter(shouldShowPin)
