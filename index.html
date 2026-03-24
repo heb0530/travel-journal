@@ -638,7 +638,7 @@
               <button class="map-filter-chip" :class="{active:mapFilter==='wish'}" @click="setMapFilter('wish')">🏷️ 태그</button>
               <button class="map-filter-chip" :class="{active:mapFilter==='schedule'}" @click="setMapFilter('schedule')">📍 일정</button>
             </div>
-            <div class="map-filter-row">
+            <div class="map-filter-row" v-if="mapFilter!=='wish'">
               <button class="map-filter-chip" :class="{active:mapDayFilter===-1}" @click="setMapDayFilter(-1)">전체 Day</button>
               <button class="map-filter-chip" v-for="(_,i) in days" :key="'df'+i"
                 :class="{active:mapDayFilter===i}"
@@ -2241,7 +2241,9 @@ createApp({
     const mapDayFilter=ref(-1) // -1 = all, 0,1,2... = specific day
 
     function setMapFilter(f) {
-      mapFilter.value=f; renderAllPins(); renderAllRoutes()
+      mapFilter.value=f
+      if (f==='wish') mapDayFilter.value=-1
+      renderAllPins(); renderAllRoutes()
       if (f!=='wish') fitFilteredPins()
     }
     function setMapDayFilter(d) { mapDayFilter.value=d; renderAllPins(); renderAllRoutes(); fitFilteredPins() }
@@ -2257,14 +2259,13 @@ createApp({
       if (!map||!currentTrip.value) return
       const visible = currentTrip.value.pins.filter(shouldShowPin)
       if (visible.length===0) return
+      if (visible.length===1) {
+        map.panTo({lat:visible[0].lat,lng:visible[0].lng})
+        return
+      }
       const bounds = new google.maps.LatLngBounds()
       visible.forEach(p => bounds.extend({lat:p.lat,lng:p.lng}))
-      const currentZoom = map.getZoom()
       map.fitBounds(bounds, {top:80,bottom:60,left:40,right:40})
-      // 현재 줌보다 확대되지 않도록 (축소만 허용)
-      google.maps.event.addListenerOnce(map, 'idle', () => {
-        if (map.getZoom() > currentZoom) map.setZoom(currentZoom)
-      })
     }
     const showColorPanel=ref(false)
 
