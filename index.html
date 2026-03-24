@@ -129,7 +129,7 @@
     .feed-entry.expanded .feed-entry-media.float-right { float:right; margin:0 0 16px 32px; }
     .feed-entry.expanded .feed-entry-body { white-space:pre-line; }
     .feed-entry.expanded::after { content:''; display:table; clear:both; }
-    .feed-entry-placeholder { width:100%; aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; font-size:4rem; border-radius:2px; }
+    .feed-entry-placeholder { width:100%; aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; font-size:4rem; border-radius:2px; background-size:cover !important; background-position:center !important; }
     .feed-entry-text { display:flex; flex-direction:column; justify-content:flex-start; }
     .feed-entry-kicker { font-size:.7rem; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-bottom:16px; }
     .feed-entry-title { font-family:Georgia,serif; font-size:2rem; font-weight:400; color:var(--ink); line-height:1.2; margin-bottom:16px; }
@@ -541,7 +541,7 @@
                   @click.stop="feedPhotoIdx[trip.id]=pi"></button>
               </div>
             </div>
-            <div v-else class="feed-entry-placeholder" :style="{background:trip.theme.cover}">{{ trip.flag }}</div>
+            <div v-else class="feed-entry-placeholder" :style="themeStyle(trip.theme)">{{ trip.flag }}</div>
           </div>
           <div class="feed-entry-text">
             <div class="feed-entry-kicker">{{ trip.destination }} · {{ trip.startDate }}</div>
@@ -570,6 +570,7 @@
                     @click.stop="feedPhotoIdx[trip.id]=pi"></button>
                 </div>
               </div>
+              <div v-else class="feed-entry-placeholder" :style="themeStyle(trip.theme)" style="border-radius:2px">{{ trip.flag }}</div>
             </div>
             <div class="feed-entry-body">{{ tripFullText(trip) }}</div>
             <div style="clear:both"></div>
