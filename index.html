@@ -687,11 +687,25 @@
                 <button class="btn btn-sm btn-danger" style="font-size:.72rem" :disabled="!selectedPinIds.length" @click="deleteSelectedPins">삭제</button>
                 <button class="btn btn-sm" style="background:#f0f0f0;color:var(--muted);font-size:.72rem" @click="selectMode=false;selectedPinIds=[]">취소</button>
               </div>
-              <div v-else-if="wishPins.length>0" style="display:flex;justify-content:flex-end;padding:4px 6px 6px">
-                <button style="background:none;border:none;font-size:.7rem;color:var(--muted);cursor:pointer;padding:2px 6px" @click="selectMode=true">선택</button>
-              </div>
-              <div v-if="wishPins.length===0&&!selectMode" style="text-align:center;color:var(--muted);font-size:.82rem;padding:24px 0">🏷️ 검색창에서 <b>태그</b> 선택 후<br>장소를 검색해 추가하세요</div>
-              <div class="wish-item" v-for="pin in wishPins" :key="pin.id" @click="selectMode?toggleSelectPin(pin.id):focusPinWithInfo(pin)">
+              <template v-else>
+                <!-- 검색 + 카테고리 필터 -->
+                <div style="padding:6px 6px 2px">
+                  <input v-model="wishSearchQuery" placeholder="태그 검색..." style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;margin-bottom:6px" />
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">
+                    <button v-for="cat in wishCategoryFilters" :key="cat.val"
+                      style="padding:2px 8px;border-radius:12px;font-size:.68rem;cursor:pointer;border:1px solid var(--border);transition:all .15s"
+                      :style="wishCategoryFilter===cat.val?{background:'var(--ink)',color:'#fff',borderColor:'var(--ink)'}:{background:'#fff',color:'var(--ink-2)'}"
+                      @click="wishCategoryFilter=wishCategoryFilter===cat.val?'all':cat.val">
+                      {{ cat.icon }} {{ cat.label }}<template v-if="cat.count"> ({{ cat.count }})</template>
+                    </button>
+                  </div>
+                </div>
+                <div v-if="wishPins.length>0" style="display:flex;justify-content:flex-end;padding:0 6px 4px">
+                  <button style="background:none;border:none;font-size:.7rem;color:var(--muted);cursor:pointer;padding:2px 6px" @click="selectMode=true">선택</button>
+                </div>
+              </template>
+              <div v-if="filteredWishPins.length===0&&!selectMode" style="text-align:center;color:var(--muted);font-size:.82rem;padding:24px 0">🏷️ 검색창에서 <b>태그</b> 선택 후<br>장소를 검색해 추가하세요</div>
+              <div class="wish-item" v-for="pin in filteredWishPins" :key="pin.id" @click="selectMode?toggleSelectPin(pin.id):focusPinWithInfo(pin)">
                 <input v-if="selectMode" type="checkbox" class="select-check" :checked="selectedPinIds.includes(pin.id)" @click.stop="toggleSelectPin(pin.id)" />
                 <span v-else style="font-size:1rem;flex-shrink:0">🏷️</span>
                 <div style="flex:1;min-width:0">
@@ -1013,15 +1027,28 @@
 
       <!-- 공개 꾸러미 탐색 -->
       <template v-if="importStep==='explore'">
-        <input class="form-input" v-model="bundleSearchQuery" placeholder="꾸러미 검색..." @input="searchPublicBundles(bundleSearchQuery)" style="margin-bottom:12px" />
+        <input class="form-input" v-model="bundleSearchQuery" placeholder="지역 또는 꾸러미 이름 검색..." @input="searchPublicBundles(bundleSearchQuery)" style="margin-bottom:8px" />
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">
+          <button v-for="cat in bundleCategoryOptions" :key="cat"
+            style="padding:3px 10px;border-radius:12px;font-size:.72rem;cursor:pointer;border:1px solid var(--border);transition:all .15s"
+            :style="bundleCategoryFilter===cat?{background:'var(--ink)',color:'#fff',borderColor:'var(--ink)'}:{background:'#fff',color:'var(--ink-2)'}"
+            @click="bundleCategoryFilter=bundleCategoryFilter===cat?'':cat;searchPublicBundles(bundleSearchQuery)">
+            {{ cat }}
+          </button>
+        </div>
         <div v-if="publicBundles.length===0" style="text-align:center;color:var(--muted);font-size:.85rem;padding:20px 0">공개 꾸러미가 없습니다</div>
         <div class="bundle-public-item" v-for="b in publicBundles" :key="b.id">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
               <div style="font-weight:600;font-size:.88rem">{{ b.name }}</div>
-              <div class="bundle-public-meta">by {{ b.owner_name || '익명' }} · {{ b.use_count || 0 }}회 사용 · {{ (b.places||[]).length }}곳</div>
+              <div class="bundle-public-meta">
+                {{ b.region || '' }} · by {{ b.owner_name || '익명' }} · {{ b.use_count || 0 }}회 사용 · {{ (b.places||[]).length }}곳
+              </div>
+              <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">
+                <span v-for="cat in bundlePlaceCats(b)" :key="cat.name" style="font-size:.65rem;padding:1px 6px;background:#f5f5f0;border-radius:8px;color:var(--ink-2)">{{ cat.icon }} {{ cat.name }} {{ cat.count }}</span>
+              </div>
             </div>
-            <button class="btn btn-sm btn-save" @click="loadPublicBundle(b)">불러오기</button>
+            <button class="btn btn-sm btn-save" style="flex-shrink:0" @click="loadPublicBundle(b)">불러오기</button>
           </div>
         </div>
       </template>
@@ -1475,12 +1502,21 @@ createApp({
       await sb.from('journal_photos').delete().eq('id', photoId)
     }
 
-    async function saveBundleToDB(name, places, visibility = 'personal') {
+    async function saveBundleToDB(name, places, visibility = 'personal', region = '', category = '') {
       const user = currentUser.value
       if (!user) return
+      // 카테고리 자동 요약
+      if (!category) {
+        const cats = {}
+        ;(places||[]).forEach(p => { const c = p.category||'기타'; cats[c]=(cats[c]||0)+1 })
+        const top = Object.entries(cats).sort((a,b)=>b[1]-a[1])
+        category = top.length > 2 ? '종합' : top.map(([c])=>c).join(', ')
+      }
+      // 지역 자동 추출 (여행 목적지에서)
+      if (!region && currentTrip.value) region = currentTrip.value.destination || ''
       const { data, error } = await sb.from('saved_bundles')
         .insert({
-          user_id: user.id, name, places, visibility,
+          user_id: user.id, name, places, visibility, region, category,
           owner_name: user.user_metadata?.full_name || user.email,
         }).select().single()
       if (error) { console.error('saveBundle', error); return null }
@@ -1742,15 +1778,26 @@ createApp({
     const publicBundles = ref([])
     const bundleSearchQuery = ref('')
 
+    const bundleCategoryFilter = ref('')
+    const bundleCategoryOptions = ['맛집','카페','관광지','숙소','쇼핑','액티비티','종합']
+
     async function searchPublicBundles(query) {
       let q = sb.from('saved_bundles')
         .select('*')
         .eq('visibility', 'public')
         .order('use_count', { ascending: false })
-        .limit(20)
-      if (query) q = q.ilike('name', `%${query}%`)
+        .limit(30)
+      if (query) q = q.or(`name.ilike.%${query}%,region.ilike.%${query}%`)
+      if (bundleCategoryFilter.value) q = q.ilike('category', `%${bundleCategoryFilter.value}%`)
       const { data } = await q
       publicBundles.value = data || []
+    }
+
+    function bundlePlaceCats(bundle) {
+      const EMOJI = {'식당':'🍽️','카페':'☕','숙소':'🏨','관광지':'🏛️','공원':'🌳','쇼핑':'🛍️','해변':'🏖️','액티비티':'🎡','기타':'📍'}
+      const cats = {}
+      ;(bundle.places||[]).forEach(p => { const c = p.category||'기타'; cats[c]=(cats[c]||0)+1 })
+      return Object.entries(cats).map(([name,count])=>({name,count,icon:EMOJI[name]||'📍'})).sort((a,b)=>b.count-a.count)
     }
 
     async function loadPublicBundle(bundle) {
@@ -2284,6 +2331,28 @@ createApp({
 
     const confirmedPins=computed(()=>(currentTrip.value?.pins||[]).filter(p=>p.type!=='wish'))
     const wishPins=computed(()=>(currentTrip.value?.pins||[]).filter(p=>p.type==='wish'))
+    const wishSearchQuery = ref('')
+    const wishCategoryFilter = ref('all')
+    const wishCategoryFilters = computed(() => {
+      const pins = wishPins.value
+      const cats = {}
+      pins.forEach(p => { const c = p.category || '기타'; cats[c] = (cats[c]||0)+1 })
+      const EMOJI = {'식당':'🍽️','카페':'☕','숙소':'🏨','관광지':'🏛️','박물관':'🏛️','공원':'🌳','쇼핑':'🛍️','공항':'✈️','교통':'🚇','해변':'🏖️','액티비티':'🎡','기타':'📍'}
+      const items = [{val:'all',icon:'📍',label:'전체',count:pins.length}]
+      Object.entries(cats).sort((a,b)=>b[1]-a[1]).forEach(([cat,count])=>{
+        items.push({val:cat, icon:EMOJI[cat]||'📍', label:cat, count})
+      })
+      return items
+    })
+    const filteredWishPins = computed(() => {
+      let pins = wishPins.value
+      if (wishCategoryFilter.value !== 'all') pins = pins.filter(p => (p.category||'기타') === wishCategoryFilter.value)
+      if (wishSearchQuery.value.trim()) {
+        const q = wishSearchQuery.value.trim().toLowerCase()
+        pins = pins.filter(p => p.name.toLowerCase().includes(q) || (p.address||'').toLowerCase().includes(q) || (p.memo||'').toLowerCase().includes(q))
+      }
+      return pins
+    })
     const confirmedByDay=computed(()=>days.value.map((_,i)=>confirmedPins.value.filter(p=>p.day===i).sort((a,b)=>a.order-b.order)))
     const summaryRows=computed(()=>[
       {label:'총 장소',value:(currentTrip.value?.pins?.length||0)+'곳'},
@@ -2618,12 +2687,12 @@ createApp({
       showShareModal,shareVisibility,shareLink,shareInvites,newInviteEmail,newInviteRole,
       openShareModal,saveShareSettings,copyShareLink,inviteUser,removeInvite,updateInviteRole,
       sharedTrips,sharedTripRole,canEdit,openSharedTrip,
-      publicBundles,bundleSearchQuery,searchPublicBundles,loadPublicBundle,
+      publicBundles,bundleSearchQuery,bundleCategoryFilter,bundleCategoryOptions,searchPublicBundles,loadPublicBundle,bundlePlaceCats,
       trips,currentTrip,confirmedCount,openTrip,detailTab,
       THEMES,showTripModal,tripModalMode,tripForm,openNewTripModal,openEditTripModal,closeTripModal,saveTripModal,deleteTrip,calcDays,
       mapTheme,toggleMapTheme,showColorPanel,
       sideTab,selectedPinType,days,addDay,deleteDay,dayColor,setDayColor,dayDate,
-      confirmedPins,wishPins,confirmedByDay,summaryRows,
+      confirmedPins,wishPins,filteredWishPins,wishSearchQuery,wishCategoryFilter,wishCategoryFilters,confirmedByDay,summaryRows,
       selectMode,selectedPinIds,toggleSelectPin,selectAllSchedule,selectAllWish,deleteSelectedPins,
       togglePinDone,
       showPinModal,editPin,pinModalStep,pinTypes,categoryList,categoryEmoji,orderOptions,onPinDayChange,openPinModal,savePin,deletePin,
