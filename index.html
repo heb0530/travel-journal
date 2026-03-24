@@ -1721,11 +1721,12 @@ createApp({
     const shareTokenFromURL = shareMatch ? shareMatch[1] : null
 
     async function loadSharedTripByToken(token) {
-      const { data, error } = await sb.from('trips')
+      const { data: rows, error } = await sb.from('trips')
         .select('*, pins(*), routes(*), journals(*, journal_photos(*))')
         .eq('share_token', token)
-        .single()
-      if (error || !data) { console.error('share load error', error); alert('공유 링크를 찾을 수 없습니다. (' + (error?.message||'not found') + ')'); return }
+      if (error) { console.error('share load error', error); alert('공유 링크를 찾을 수 없습니다. (' + error.message + ')'); return }
+      const data = rows?.[0]
+      if (!data) { alert('공유 링크를 찾을 수 없거나 비공개 여행입니다.'); return }
       const trip = mapTripFromDB(data)
       trip.user_id = data.user_id
       trip.visibility = data.visibility
