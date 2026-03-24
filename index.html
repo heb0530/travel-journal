@@ -2248,7 +2248,12 @@ createApp({
       if (visible.length===0) return
       const bounds = new google.maps.LatLngBounds()
       visible.forEach(p => bounds.extend({lat:p.lat,lng:p.lng}))
+      const currentZoom = map.getZoom()
       map.fitBounds(bounds, {top:80,bottom:60,left:40,right:40})
+      // 현재 줌보다 확대되지 않도록 (축소만 허용)
+      google.maps.event.addListenerOnce(map, 'idle', () => {
+        if (map.getZoom() > currentZoom) map.setZoom(currentZoom)
+      })
     }
     const showColorPanel=ref(false)
 
