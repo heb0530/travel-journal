@@ -479,7 +479,7 @@
         <div class="trip-card-wrap" v-for="trip in trips" :key="trip.id">
           <div class="trip-card" @click="openTrip(trip)">
             <img v-if="tripCoverPhoto(trip)" :src="tripCoverPhoto(trip)" class="trip-card-img" />
-            <div v-else class="trip-card-img-placeholder" :style="{background:trip.theme.cover}">{{ trip.flag }}</div>
+            <div v-else class="trip-card-img-placeholder" :style="themeStyle(trip.theme)">{{ trip.flag }}</div>
             <div class="trip-card-body">
               <div class="trip-card-dest">{{ trip.destination }}</div>
               <div class="trip-card-name">{{ trip.name }}</div>
@@ -508,7 +508,7 @@
       </div>
       <div class="trips-grid">
         <div class="trip-card-wrap" v-for="trip in sharedTrips" :key="'s-'+trip.id">
-          <div class="trip-card" @click="openSharedTrip(trip)" :style="trip.theme?.cover?{background:trip.theme.cover}:{}">
+          <div class="trip-card" @click="openSharedTrip(trip)" :style="trip.theme?themeStyle(trip.theme):{}">
             <img v-if="tripCoverPhoto(trip)" :src="tripCoverPhoto(trip)" class="trip-card-img" />
             <div class="trip-card-body">
               <div class="trip-card-flag">{{ trip.flag }}</div>
@@ -859,7 +859,7 @@
         <label class="form-label">표지 색상</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <div v-for="(t,i) in THEMES" :key="i" style="width:32px;height:42px;border-radius:3px;cursor:pointer;transition:all .15s"
-            :style="{background:t.cover,outline:tripForm.themeIdx===i?'3px solid var(--ink)':'none',outlineOffset:'2px'}"
+            :style="{...themeStyle(t),outline:tripForm.themeIdx===i?'3px solid var(--ink)':'none',outlineOffset:'2px'}"
             @click="tripForm.themeIdx=i"></div>
         </div>
       </div>
@@ -1237,14 +1237,26 @@
 const { createApp, ref, computed, onMounted, watch, nextTick } = Vue
 
 const THEMES = [
-  {spine:'#7C9EB2',cover:'linear-gradient(160deg,#BDD4E0 0%,#A3C4D5 60%,#8BB4CA 100%)'},
-  {spine:'#8BA88B',cover:'linear-gradient(160deg,#BCDABC 0%,#A2CCA2 60%,#8BBF8B 100%)'},
-  {spine:'#C4908B',cover:'linear-gradient(160deg,#EABFBA 0%,#DBA9A3 60%,#CC938C 100%)'},
-  {spine:'#9B8BB5',cover:'linear-gradient(160deg,#CBBFE0 0%,#B8AAD3 60%,#A595C6 100%)'},
-  {spine:'#C4A87C',cover:'linear-gradient(160deg,#E5D5B5 0%,#D9C59E 60%,#CDB588 100%)'},
-  {spine:'#7CB5B5',cover:'linear-gradient(160deg,#ADE0E0 0%,#94D2D2 60%,#7CC4C4 100%)'},
-  {spine:'#B59B8B',cover:'linear-gradient(160deg,#DBC8B8 0%,#CCB5A2 60%,#BDA28C 100%)'},
-  {spine:'#8B8B9B',cover:'linear-gradient(160deg,#B8B8CC 0%,#A5A5B8 60%,#9292A8 100%)'},
+  // 🌊 바다 물결
+  {spine:'#5B8FA8',cover:'linear-gradient(135deg,#74b9d4 0%,#5BA8C8 40%,#3D8EB0 100%)',pattern:'repeating-linear-gradient(45deg,rgba(255,255,255,.08) 0px,rgba(255,255,255,.08) 2px,transparent 2px,transparent 12px)'},
+  // 🌿 숲길
+  {spine:'#6B9B6B',cover:'linear-gradient(135deg,#8BC78B 0%,#6BAF6B 40%,#4D954D 100%)',pattern:'radial-gradient(circle at 30% 40%,rgba(255,255,255,.1) 1px,transparent 1px),radial-gradient(circle at 70% 60%,rgba(255,255,255,.1) 1px,transparent 1px)'},
+  // 🌸 벚꽃
+  {spine:'#C48B9B',cover:'linear-gradient(135deg,#F0C4D0 0%,#E8A0B8 40%,#D580A0 100%)',pattern:'radial-gradient(circle at 20% 30%,rgba(255,255,255,.15) 3px,transparent 3px),radial-gradient(circle at 80% 70%,rgba(255,255,255,.12) 4px,transparent 4px),radial-gradient(circle at 50% 50%,rgba(255,255,255,.1) 2px,transparent 2px)'},
+  // 🌙 밤하늘
+  {spine:'#4A5580',cover:'linear-gradient(135deg,#2C3E6B 0%,#3D4F7C 40%,#1A2A55 100%)',pattern:'radial-gradient(circle at 15% 25%,rgba(255,255,255,.3) 1px,transparent 1px),radial-gradient(circle at 45% 15%,rgba(255,255,255,.2) 1px,transparent 1px),radial-gradient(circle at 75% 35%,rgba(255,255,255,.25) 1px,transparent 1px),radial-gradient(circle at 85% 75%,rgba(255,255,255,.15) 1px,transparent 1px),radial-gradient(circle at 35% 65%,rgba(255,255,255,.2) 1px,transparent 1px),radial-gradient(circle at 60% 85%,rgba(255,255,255,.15) 1px,transparent 1px)'},
+  // 🏖️ 선셋
+  {spine:'#C88B50',cover:'linear-gradient(135deg,#FFB88C 0%,#F09060 40%,#DE7843 100%)',pattern:'linear-gradient(180deg,rgba(255,255,255,.12) 0%,transparent 50%,rgba(0,0,0,.05) 100%)'},
+  // 🍇 라벤더
+  {spine:'#8B70B0',cover:'linear-gradient(135deg,#B8A0D8 0%,#9B80C8 40%,#7E60B8 100%)',pattern:'repeating-linear-gradient(-45deg,rgba(255,255,255,.06) 0px,rgba(255,255,255,.06) 3px,transparent 3px,transparent 15px)'},
+  // ☁️ 구름
+  {spine:'#8899AA',cover:'linear-gradient(135deg,#C8D8E8 0%,#A8BED0 40%,#88A4B8 100%)',pattern:'radial-gradient(ellipse at 30% 50%,rgba(255,255,255,.2) 20px,transparent 20px),radial-gradient(ellipse at 70% 40%,rgba(255,255,255,.15) 25px,transparent 25px)'},
+  // 🍂 가을
+  {spine:'#A0784A',cover:'linear-gradient(135deg,#D4A86A 0%,#C89050 40%,#B07838 100%)',pattern:'radial-gradient(circle at 25% 60%,rgba(180,80,30,.12) 6px,transparent 6px),radial-gradient(circle at 65% 30%,rgba(200,120,40,.1) 5px,transparent 5px),radial-gradient(circle at 85% 80%,rgba(160,60,20,.08) 4px,transparent 4px)'},
+  // 🧊 겨울
+  {spine:'#7A9AB0',cover:'linear-gradient(135deg,#D8E8F0 0%,#B0C8D8 40%,#88A8C0 100%)',pattern:'radial-gradient(circle at 20% 20%,rgba(255,255,255,.4) 1px,transparent 1px),radial-gradient(circle at 50% 40%,rgba(255,255,255,.3) 1px,transparent 1px),radial-gradient(circle at 80% 60%,rgba(255,255,255,.35) 1px,transparent 1px),radial-gradient(circle at 40% 80%,rgba(255,255,255,.25) 1px,transparent 1px)'},
+  // 🌺 트로피컬
+  {spine:'#2D9B83',cover:'linear-gradient(135deg,#43C6A8 0%,#2DB090 40%,#1A9A78 100%)',pattern:'repeating-linear-gradient(60deg,rgba(255,255,255,.05) 0px,rgba(255,255,255,.05) 2px,transparent 2px,transparent 10px),repeating-linear-gradient(-60deg,rgba(255,255,255,.05) 0px,rgba(255,255,255,.05) 2px,transparent 2px,transparent 10px)'},
 ]
 const DAY_COLORS = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#A78BFA','#FB923C','#34D399','#F472B6','#60A5FA','#FBBF24']
 const CATEGORY_MAP = {
@@ -1746,6 +1758,8 @@ createApp({
 
     const canEdit = computed(() => {
       if (!currentTrip.value) return false
+      // 소유자이거나, 공유 모드가 아니면 편집 가능
+      if (!sharedTripRole.value) return true
       if (currentTrip.value.user_id === currentUser.value?.id) return true
       return sharedTripRole.value === 'editor'
     })
@@ -1981,6 +1995,11 @@ createApp({
     const trips = ref([])
     const currentTrip = ref(null)
     function confirmedCount(t) { return (t.pins||[]).filter(p=>p.type!=='wish').length }
+    function themeStyle(theme) {
+      if (!theme) return {}
+      const bg = theme.pattern ? `${theme.pattern},${theme.cover}` : theme.cover
+      return { background: bg }
+    }
 
     // ── Journal helpers ─────────────────────────────
     function getJournalEntry(dayIdx) {
@@ -2878,7 +2897,7 @@ createApp({
       sharedTrips,sharedTripRole,canEdit,openSharedTrip,
       publicBundles,bundleSearchQuery,bundleCategoryFilter,bundleCategoryOptions,searchPublicBundles,loadPublicBundle,bundlePlaceCats,
       recRegion,recCategory,recCategories,recResults,recLoading,recProgress,recTotal,recCatEmoji,fetchRecommendations,recApplyAsTags,recSaveAsBundle,
-      trips,currentTrip,confirmedCount,openTrip,detailTab,
+      trips,currentTrip,confirmedCount,themeStyle,openTrip,detailTab,
       THEMES,showTripModal,tripModalMode,tripForm,openNewTripModal,openEditTripModal,closeTripModal,saveTripModal,deleteTrip,calcDays,
       mapTheme,toggleMapTheme,showColorPanel,
       sideTab,selectedPinType,days,addDay,deleteDay,dayColor,setDayColor,dayDate,
