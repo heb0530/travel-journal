@@ -1237,26 +1237,16 @@
 const { createApp, ref, computed, onMounted, watch, nextTick } = Vue
 
 const THEMES = [
-  // 🌊 바다 물결
-  {spine:'#5B8FA8',cover:'linear-gradient(135deg,#74b9d4 0%,#5BA8C8 40%,#3D8EB0 100%)',pattern:'repeating-linear-gradient(45deg,rgba(255,255,255,.08) 0px,rgba(255,255,255,.08) 2px,transparent 2px,transparent 12px)'},
-  // 🌿 숲길
-  {spine:'#6B9B6B',cover:'linear-gradient(135deg,#8BC78B 0%,#6BAF6B 40%,#4D954D 100%)',pattern:'radial-gradient(circle at 30% 40%,rgba(255,255,255,.1) 1px,transparent 1px),radial-gradient(circle at 70% 60%,rgba(255,255,255,.1) 1px,transparent 1px)'},
-  // 🌸 벚꽃
-  {spine:'#C48B9B',cover:'linear-gradient(135deg,#F0C4D0 0%,#E8A0B8 40%,#D580A0 100%)',pattern:'radial-gradient(circle at 20% 30%,rgba(255,255,255,.15) 3px,transparent 3px),radial-gradient(circle at 80% 70%,rgba(255,255,255,.12) 4px,transparent 4px),radial-gradient(circle at 50% 50%,rgba(255,255,255,.1) 2px,transparent 2px)'},
-  // 🌙 밤하늘
-  {spine:'#4A5580',cover:'linear-gradient(135deg,#2C3E6B 0%,#3D4F7C 40%,#1A2A55 100%)',pattern:'radial-gradient(circle at 15% 25%,rgba(255,255,255,.3) 1px,transparent 1px),radial-gradient(circle at 45% 15%,rgba(255,255,255,.2) 1px,transparent 1px),radial-gradient(circle at 75% 35%,rgba(255,255,255,.25) 1px,transparent 1px),radial-gradient(circle at 85% 75%,rgba(255,255,255,.15) 1px,transparent 1px),radial-gradient(circle at 35% 65%,rgba(255,255,255,.2) 1px,transparent 1px),radial-gradient(circle at 60% 85%,rgba(255,255,255,.15) 1px,transparent 1px)'},
-  // 🏖️ 선셋
-  {spine:'#C88B50',cover:'linear-gradient(135deg,#FFB88C 0%,#F09060 40%,#DE7843 100%)',pattern:'linear-gradient(180deg,rgba(255,255,255,.12) 0%,transparent 50%,rgba(0,0,0,.05) 100%)'},
-  // 🍇 라벤더
-  {spine:'#8B70B0',cover:'linear-gradient(135deg,#B8A0D8 0%,#9B80C8 40%,#7E60B8 100%)',pattern:'repeating-linear-gradient(-45deg,rgba(255,255,255,.06) 0px,rgba(255,255,255,.06) 3px,transparent 3px,transparent 15px)'},
-  // ☁️ 구름
-  {spine:'#8899AA',cover:'linear-gradient(135deg,#C8D8E8 0%,#A8BED0 40%,#88A4B8 100%)',pattern:'radial-gradient(ellipse at 30% 50%,rgba(255,255,255,.2) 20px,transparent 20px),radial-gradient(ellipse at 70% 40%,rgba(255,255,255,.15) 25px,transparent 25px)'},
-  // 🍂 가을
-  {spine:'#A0784A',cover:'linear-gradient(135deg,#D4A86A 0%,#C89050 40%,#B07838 100%)',pattern:'radial-gradient(circle at 25% 60%,rgba(180,80,30,.12) 6px,transparent 6px),radial-gradient(circle at 65% 30%,rgba(200,120,40,.1) 5px,transparent 5px),radial-gradient(circle at 85% 80%,rgba(160,60,20,.08) 4px,transparent 4px)'},
-  // 🧊 겨울
-  {spine:'#7A9AB0',cover:'linear-gradient(135deg,#D8E8F0 0%,#B0C8D8 40%,#88A8C0 100%)',pattern:'radial-gradient(circle at 20% 20%,rgba(255,255,255,.4) 1px,transparent 1px),radial-gradient(circle at 50% 40%,rgba(255,255,255,.3) 1px,transparent 1px),radial-gradient(circle at 80% 60%,rgba(255,255,255,.35) 1px,transparent 1px),radial-gradient(circle at 40% 80%,rgba(255,255,255,.25) 1px,transparent 1px)'},
-  // 🌺 트로피컬
-  {spine:'#2D9B83',cover:'linear-gradient(135deg,#43C6A8 0%,#2DB090 40%,#1A9A78 100%)',pattern:'repeating-linear-gradient(60deg,rgba(255,255,255,.05) 0px,rgba(255,255,255,.05) 2px,transparent 2px,transparent 10px),repeating-linear-gradient(-60deg,rgba(255,255,255,.05) 0px,rgba(255,255,255,.05) 2px,transparent 2px,transparent 10px)'},
+  {spine:'#1a1917',cover:'linear-gradient(150deg,#1a1917 0%,#2c2926 50%,#3d3630 100%)'},
+  {spine:'#2C3E50',cover:'linear-gradient(150deg,#2C3E50 0%,#3D566E 50%,#1a252f 100%)'},
+  {spine:'#8E6E53',cover:'linear-gradient(150deg,#F5EDE3 0%,#E8DDD0 50%,#D5C8B8 100%)'},
+  {spine:'#6B7B8D',cover:'linear-gradient(150deg,#DFE6ED 0%,#C8D3DE 50%,#B0BFCE 100%)'},
+  {spine:'#7D6B91',cover:'linear-gradient(150deg,#E8E0F0 0%,#D5C8E5 50%,#C0B0D8 100%)'},
+  {spine:'#5E8B7E',cover:'linear-gradient(150deg,#E0EDE8 0%,#C5DDD3 50%,#A8CCB8 100%)'},
+  {spine:'#B0876E',cover:'linear-gradient(150deg,#F0E4D8 0%,#E0CFC0 50%,#CCBAA5 100%)'},
+  {spine:'#4A6FA5',cover:'linear-gradient(150deg,#E0EBF5 0%,#C5D8EB 50%,#A8C4E0 100%)'},
+  {spine:'#C07060',cover:'linear-gradient(150deg,#F5E0DB 0%,#E8CCC5 50%,#D8B5AC 100%)'},
+  {spine:'#2D2D2D',cover:'linear-gradient(150deg,#F0F0ED 0%,#E5E5E0 50%,#D8D8D0 100%)'},
 ]
 const DAY_COLORS = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#A78BFA','#FB923C','#34D399','#F472B6','#60A5FA','#FBBF24']
 const CATEGORY_MAP = {
