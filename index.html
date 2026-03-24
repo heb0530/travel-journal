@@ -2242,8 +2242,7 @@ createApp({
 
     function setMapFilter(f) {
       mapFilter.value=f; renderAllPins(); renderAllRoutes()
-      if (f==='wish') panToFilteredPins()
-      else fitFilteredPins()
+      if (f!=='wish') fitFilteredPins()
     }
     function setMapDayFilter(d) { mapDayFilter.value=d; renderAllPins(); renderAllRoutes(); fitFilteredPins() }
     function panToFilteredPins() {
