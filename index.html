@@ -2249,7 +2249,17 @@ createApp({
       if (f==='all' && prevFilter==='schedule') return
       if (f!=='wish') fitFilteredPins()
     }
-    function setMapDayFilter(d) { mapDayFilter.value=d; renderAllPins(); renderAllRoutes(); fitFilteredPins() }
+    function setMapDayFilter(d) {
+      mapDayFilter.value=d; renderAllPins(); renderAllRoutes()
+      // 일정 핀 기준으로만 줌 (태그 무시)
+      if (!map||!currentTrip.value) return
+      const schedulePins = currentTrip.value.pins.filter(p => p.type!=='wish' && (d<0 || p.day===d))
+      if (schedulePins.length===0) return
+      if (schedulePins.length===1) { map.panTo({lat:schedulePins[0].lat,lng:schedulePins[0].lng}); return }
+      const bounds = new google.maps.LatLngBounds()
+      schedulePins.forEach(p => bounds.extend({lat:p.lat,lng:p.lng}))
+      map.fitBounds(bounds, {top:80,bottom:60,left:40,right:40})
+    }
     function panToFilteredPins() {
       if (!map||!currentTrip.value) return
       const visible = currentTrip.value.pins.filter(shouldShowPin)
@@ -2363,7 +2373,7 @@ createApp({
       // 타입 필터
       if (mapFilter.value==='wish' && p.type!=='wish') return false
       if (mapFilter.value==='schedule' && p.type==='wish') return false
-      // Day 필터 (태그는 Day 없으므로 항상 표시, 일정만 Day 필터 적용)
+      // Day 필터: 일정/완료 핀에만 적용, 태그는 항상 표시
       if (mapDayFilter.value>=0 && p.type!=='wish' && p.day!==mapDayFilter.value) return false
       return true
     }
