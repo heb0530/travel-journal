@@ -714,6 +714,28 @@
                 </div>
                 <button v-if="!selectMode" style="background:none;border:none;color:#bbb;cursor:pointer;padding:2px 6px;" @click.stop="openPinModal(pin)">✏️</button>
               </div>
+              <!-- 태그 꾸러미로 저장 -->
+              <div v-if="wishPins.length>0&&!selectMode" style="padding:12px 8px;border-top:1px solid var(--border);margin-top:8px">
+                <div v-if="!showSaveTagBundle">
+                  <button class="btn btn-sm" style="width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--border)" @click="showSaveTagBundle=true">📦 태그를 꾸러미로 저장</button>
+                </div>
+                <div v-else>
+                  <input class="form-input" v-model="tagBundleName" :placeholder="(currentTrip?.destination||'')+ ' 태그 모음'" style="font-size:.82rem;margin-bottom:6px" />
+                  <div style="display:flex;gap:6px;margin-bottom:8px">
+                    <button style="flex:1;padding:6px;border-radius:6px;font-size:.78rem;cursor:pointer;transition:all .15s"
+                      :style="tagBundleVisibility==='personal'?{background:'var(--ink)',color:'#fff',border:'1.5px solid var(--ink)'}:{background:'#fff',color:'var(--ink-2)',border:'1.5px solid var(--border)'}"
+                      @click="tagBundleVisibility='personal'">🔒 나만</button>
+                    <button style="flex:1;padding:6px;border-radius:6px;font-size:.78rem;cursor:pointer;transition:all .15s"
+                      :style="tagBundleVisibility==='public'?{background:'var(--ink)',color:'#fff',border:'1.5px solid var(--ink)'}:{background:'#fff',color:'var(--ink-2)',border:'1.5px solid var(--border)'}"
+                      @click="tagBundleVisibility='public'">🌐 전체 공개</button>
+                  </div>
+                  <div style="display:flex;gap:6px">
+                    <button class="btn btn-sm btn-cancel" @click="showSaveTagBundle=false" style="flex:1">취소</button>
+                    <button class="btn btn-sm btn-save" @click="saveTagsAsBundle" style="flex:1">저장 ({{ filteredWishPins.length }}곳)</button>
+                  </div>
+                  <div v-if="wishCategoryFilter!=='all'" style="font-size:.7rem;color:var(--muted);margin-top:4px;text-align:center">현재 필터된 {{ filteredWishPins.length }}곳만 저장됩니다</div>
+                </div>
+              </div>
             </template>
             <template v-if="sideTab==='summary'">
               <div style="padding:4px 0">
@@ -2365,6 +2387,28 @@ createApp({
       }
       return pins
     })
+    const showSaveTagBundle = ref(false)
+    const tagBundleName = ref('')
+    const tagBundleVisibility = ref('personal')
+
+    async function saveTagsAsBundle() {
+      const pins = filteredWishPins.value
+      if (!pins.length) return alert('저장할 태그가 없습니다.')
+      const name = tagBundleName.value.trim() || (currentTrip.value?.destination||'') + ' 태그 모음'
+      const places = pins.map(p => ({
+        name: p.name, lat: p.lat, lng: p.lng, address: p.address,
+        placeId: p.placeId, category: p.category, rating: p.rating, memo: p.memo,
+      }))
+      const newBundle = await saveBundleToDB(name, places, tagBundleVisibility.value)
+      if (newBundle) {
+        savedBundles.value.push(newBundle)
+        alert(`"${name}" 꾸러미가 ${tagBundleVisibility.value==='public'?'전체 공개로':'나만 보기로'} 저장되었습니다!`)
+      }
+      showSaveTagBundle.value = false
+      tagBundleName.value = ''
+      tagBundleVisibility.value = 'personal'
+    }
+
     const confirmedByDay=computed(()=>days.value.map((_,i)=>confirmedPins.value.filter(p=>p.day===i).sort((a,b)=>a.order-b.order)))
     const summaryRows=computed(()=>[
       {label:'총 장소',value:(currentTrip.value?.pins?.length||0)+'곳'},
@@ -2705,7 +2749,9 @@ createApp({
       THEMES,showTripModal,tripModalMode,tripForm,openNewTripModal,openEditTripModal,closeTripModal,saveTripModal,deleteTrip,calcDays,
       mapTheme,toggleMapTheme,showColorPanel,
       sideTab,selectedPinType,days,addDay,deleteDay,dayColor,setDayColor,dayDate,
-      confirmedPins,wishPins,filteredWishPins,wishSearchQuery,wishCategoryFilter,wishCategoryFilters,confirmedByDay,summaryRows,
+      confirmedPins,wishPins,filteredWishPins,wishSearchQuery,wishCategoryFilter,wishCategoryFilters,
+      showSaveTagBundle,tagBundleName,tagBundleVisibility,saveTagsAsBundle,
+      confirmedByDay,summaryRows,
       selectMode,selectedPinIds,toggleSelectPin,selectAllSchedule,selectAllWish,deleteSelectedPins,
       togglePinDone,
       showPinModal,editPin,pinModalStep,pinTypes,categoryList,categoryEmoji,orderOptions,onPinDayChange,openPinModal,savePin,deletePin,
