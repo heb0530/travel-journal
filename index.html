@@ -176,9 +176,9 @@
 
     /* ── 디테일 페이지 ── */
     .detail-page { display:flex; flex-direction:column; height:100vh; background:var(--bg); }
-    .detail-topbar { background:var(--surface); padding:0 24px; display:flex; align-items:center; gap:16px; height:60px; border-bottom:1px solid var(--border); z-index:10; flex-shrink:0; }
-    .detail-topbar-title { font-family:Georgia,serif; font-size:1.05rem; font-weight:400; color:var(--ink); }
-    .detail-topbar-dest { font-size:.75rem; color:var(--muted); letter-spacing:.02em; }
+    .detail-topbar { background:var(--surface); padding:10px 24px; display:flex; align-items:center; gap:12px; min-height:60px; border-bottom:1px solid var(--border); z-index:10; flex-shrink:0; flex-wrap:wrap; }
+    .detail-topbar-title { font-family:Georgia,serif; font-size:1.05rem; font-weight:400; color:var(--ink); white-space:nowrap; }
+    .detail-topbar-dest { font-size:.75rem; color:var(--muted); letter-spacing:.02em; white-space:nowrap; }
     .back-btn { background:none; border:1.5px solid var(--border); border-radius:6px; padding:6px 14px; font-size:.82rem; cursor:pointer; color:var(--ink); transition:all .15s; }
     .back-btn:hover { background:var(--bg); border-color:var(--ink); }
     .detail-tabs-bar { display:flex; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0; padding:0 24px; }
@@ -342,6 +342,11 @@
     }
     @media (max-width:480px) {
       .trips-grid { grid-template-columns:1fr; }
+      .detail-topbar { padding:8px 12px; gap:8px; }
+      .detail-topbar-title { font-size:.9rem; }
+      .detail-topbar-dest { font-size:.68rem; }
+      .detail-topbar .btn-sm, .detail-topbar .share-btn { font-size:.7rem; padding:4px 8px; }
+      .back-btn { padding:4px 10px; font-size:.75rem; }
       .side-panel { position:fixed; bottom:0; left:0; right:0; width:100% !important; max-width:100% !important; min-width:0; height:55vh; border-left:none; border-top:1px solid var(--border); border-radius:16px 16px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,.15); z-index:100; transform:translateY(100%); transition:transform .3s ease; }
       .side-panel.mobile-open { transform:translateY(0); }
       .side-resize-handle { display:none; }
@@ -586,7 +591,7 @@
         <div class="detail-topbar-title">{{ currentTrip.flag }} {{ currentTrip.name }}</div>
         <div class="detail-topbar-dest">{{ currentTrip.destination }} · {{ currentTrip.startDate }}~{{ currentTrip.endDate }}</div>
       </div>
-      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
         <button class="share-btn" @click="openShareModal" v-if="canEdit">🔗 공유</button>
         <span v-if="currentTrip.visibility==='public'" style="font-size:.7rem;padding:3px 8px;background:#E8F5E9;color:#2E7D32;border-radius:10px">🌐 전체 공개</span>
         <span v-if="currentTrip.visibility==='invite'" style="font-size:.7rem;padding:3px 8px;background:#E3F2FD;color:#1565C0;border-radius:10px">👥 초대</span>
