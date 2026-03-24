@@ -1042,9 +1042,10 @@
       <div class="modal-title">태그 꾸러미<button class="modal-close" @click="closeImportGuide">✕</button></div>
 
       <!-- 탐색 탭 -->
-      <div class="bundle-explore-tab" v-if="importStep==='select'||importStep==='explore'">
+      <div class="bundle-explore-tab" v-if="['select','explore','recommend'].includes(importStep)">
         <button class="bundle-tab" :class="{active:importStep==='select'}" @click="importStep='select'">내 꾸러미</button>
         <button class="bundle-tab" :class="{active:importStep==='explore'}" @click="importStep='explore';searchPublicBundles('')">🔍 탐색</button>
+        <button class="bundle-tab" :class="{active:importStep==='recommend'}" @click="importStep='recommend';recRegion=currentTrip?.destination||'';recResults=[]">✨ 자동 추천</button>
       </div>
 
       <!-- 공개 꾸러미 탐색 -->
@@ -1071,6 +1072,44 @@
               </div>
             </div>
             <button class="btn btn-sm btn-save" style="flex-shrink:0" @click="loadPublicBundle(b)">불러오기</button>
+          </div>
+        </div>
+      </template>
+
+      <!-- 자동 추천 -->
+      <template v-if="importStep==='recommend'">
+        <div style="margin-bottom:12px">
+          <label class="form-label">지역 (도시/나라)</label>
+          <input class="form-input" v-model="recRegion" :placeholder="currentTrip?.destination||'예: 나고야, 파리, 방콕'" />
+        </div>
+        <div style="margin-bottom:12px">
+          <label class="form-label">카테고리</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <button v-for="cat in recCategories" :key="cat.val"
+              style="padding:6px 14px;border-radius:18px;font-size:.82rem;cursor:pointer;transition:all .15s"
+              :style="recCategory===cat.val?{background:'var(--ink)',color:'#fff',border:'1.5px solid var(--ink)'}:{background:'#fff',color:'var(--ink-2)',border:'1.5px solid var(--border)'}"
+              @click="recCategory=cat.val">
+              {{ cat.icon }} {{ cat.label }}
+            </button>
+          </div>
+        </div>
+        <button class="btn btn-save" style="width:100%" @click="fetchRecommendations" :disabled="recLoading||!recRegion.trim()">
+          {{ recLoading ? '검색 중... ('+recProgress+'/'+recTotal+')' : '✨ 추천 장소 검색' }}
+        </button>
+        <div v-if="recResults.length>0" style="margin-top:16px">
+          <div style="font-size:.82rem;font-weight:600;margin-bottom:8px">{{ recResults.length }}곳 발견</div>
+          <div style="max-height:240px;overflow-y:auto">
+            <div v-for="(p,i) in recResults" :key="i" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f5f5f0;font-size:.82rem">
+              <span style="flex-shrink:0">{{ recCatEmoji(p.category) }}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600">{{ p.name }}</div>
+                <div style="font-size:.72rem;color:var(--muted)">{{ p.address }} {{ p.rating ? '★'+p.rating : '' }}</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-sm btn-save" style="flex:1" @click="recApplyAsTags">🏷️ 태그로 추가</button>
+            <button class="btn btn-sm" style="flex:1;background:var(--bg);color:var(--ink);border:1px solid var(--border)" @click="recSaveAsBundle">📦 꾸러미로 저장</button>
           </div>
         </div>
       </template>
@@ -1841,6 +1880,99 @@ createApp({
       await sb.from('saved_bundles')
         .update({ use_count: (bundle.use_count || 0) + 1 })
         .eq('id', bundle.id)
+    }
+
+    // ── 자동 추천 ─────────────────────────────
+    const recRegion = ref('')
+    const recCategory = ref('restaurant')
+    const recResults = ref([])
+    const recLoading = ref(false)
+    const recProgress = ref(0)
+    const recTotal = ref(0)
+    const recCategories = [
+      {val:'restaurant',icon:'🍽️',label:'맛집'},
+      {val:'cafe',icon:'☕',label:'카페'},
+      {val:'tourist_attraction',icon:'🏛️',label:'관광지'},
+      {val:'lodging',icon:'🏨',label:'숙소'},
+      {val:'shopping_mall',icon:'🛍️',label:'쇼핑'},
+      {val:'park',icon:'🌳',label:'공원/자연'},
+      {val:'night_club',icon:'🍸',label:'바/클럽'},
+    ]
+    const REC_CAT_MAP = {restaurant:'식당',cafe:'카페',tourist_attraction:'관광지',lodging:'숙소',shopping_mall:'쇼핑',park:'공원',night_club:'액티비티'}
+    function recCatEmoji(cat) {
+      const m = {'식당':'🍽️','카페':'☕','관광지':'🏛️','숙소':'🏨','쇼핑':'🛍️','공원':'🌳','액티비티':'🎡','기타':'📍'}
+      return m[cat]||'📍'
+    }
+
+    async function fetchRecommendations() {
+      if (!recRegion.value.trim()) return
+      if (!window.google) { alert('지도가 로드되지 않았습니다.'); return }
+      recLoading.value = true
+      recResults.value = []
+      recProgress.value = 0
+
+      const catLabel = recCategories.find(c=>c.val===recCategory.value)?.label || ''
+      const queries = [`${recRegion.value} ${catLabel} 추천`, `${recRegion.value} best ${recCategory.value}`]
+      recTotal.value = queries.length
+
+      const service = new google.maps.places.PlacesService(document.createElement('div'))
+      const allPlaces = []
+      const seen = new Set()
+
+      for (const query of queries) {
+        try {
+          const results = await new Promise((resolve, reject) => {
+            service.textSearch({ query, type: recCategory.value }, (results, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK) resolve(results)
+              else resolve([])
+            })
+          })
+          for (const r of results) {
+            const key = r.place_id || r.name
+            if (seen.has(key)) continue
+            seen.add(key)
+            allPlaces.push({
+              name: r.name,
+              lat: r.geometry.location.lat(),
+              lng: r.geometry.location.lng(),
+              address: r.formatted_address || r.vicinity || '',
+              placeId: r.place_id,
+              category: REC_CAT_MAP[recCategory.value] || '기타',
+              rating: r.rating || null,
+              memo: '',
+            })
+          }
+        } catch(e) { console.warn('rec search error', e) }
+        recProgress.value++
+      }
+
+      // 별점순 정렬
+      recResults.value = allPlaces.sort((a,b) => (b.rating||0) - (a.rating||0)).slice(0, 30)
+      recLoading.value = false
+    }
+
+    function recApplyAsTags() {
+      if (!currentTrip.value || !recResults.value.length) return
+      for (const p of recResults.value) {
+        const exists = currentTrip.value.pins.find(pin => pin.placeId === p.placeId || (pin.lat===p.lat && pin.lng===p.lng))
+        if (exists) continue
+        const pin = { _isNew:true, type:'wish', ...p, order:null, day:0, visitTime:'', reservationUrl:'' }
+        savePinToDB(currentTrip.value.id, pin).then(id => { if(id) pin.id = id; delete pin._isNew })
+        currentTrip.value.pins.push(pin)
+      }
+      alert(`${recResults.value.length}곳이 태그로 추가되었습니다!`)
+      closeImportGuide()
+      renderAllPins()
+    }
+
+    async function recSaveAsBundle() {
+      if (!recResults.value.length) return
+      const name = `${recRegion.value} ${recCategories.find(c=>c.val===recCategory.value)?.label||''}`
+      const newBundle = await saveBundleToDB(name, recResults.value, 'public', recRegion.value)
+      if (newBundle) {
+        savedBundles.value.push(newBundle)
+        alert(`"${name}" 꾸러미가 전체 공개로 저장되었습니다!`)
+      }
     }
 
     const sideTab = ref('schedule')
@@ -2745,6 +2877,7 @@ createApp({
       openShareModal,saveShareSettings,copyShareLink,inviteUser,removeInvite,updateInviteRole,
       sharedTrips,sharedTripRole,canEdit,openSharedTrip,
       publicBundles,bundleSearchQuery,bundleCategoryFilter,bundleCategoryOptions,searchPublicBundles,loadPublicBundle,bundlePlaceCats,
+      recRegion,recCategory,recCategories,recResults,recLoading,recProgress,recTotal,recCatEmoji,fetchRecommendations,recApplyAsTags,recSaveAsBundle,
       trips,currentTrip,confirmedCount,openTrip,detailTab,
       THEMES,showTripModal,tripModalMode,tripForm,openNewTripModal,openEditTripModal,closeTripModal,saveTripModal,deleteTrip,calcDays,
       mapTheme,toggleMapTheme,showColorPanel,
