@@ -2883,7 +2883,8 @@ createApp({
     function focusPin(pin){if(!map)return;map.panTo({lat:pin.lat,lng:pin.lng});map.setZoom(16)}
     function focusPinWithInfo(pin){
       if(!map)return
-      map.panTo({lat:pin.lat,lng:pin.lng});map.setZoom(16)
+      map.panTo({lat:pin.lat,lng:pin.lng})
+      if(pin.type!=='wish') map.setZoom(16)
       nextTick(()=>showPinInfoWindow(pin))
     }
 
