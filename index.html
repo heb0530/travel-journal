@@ -1725,7 +1725,7 @@ createApp({
         .select('*, pins(*), routes(*), journals(*, journal_photos(*))')
         .eq('share_token', token)
         .single()
-      if (error || !data) { alert('공유 링크를 찾을 수 없습니다.'); return }
+      if (error || !data) { console.error('share load error', error); alert('공유 링크를 찾을 수 없습니다. (' + (error?.message||'not found') + ')'); return }
       const trip = mapTripFromDB(data)
       trip.user_id = data.user_id
       trip.visibility = data.visibility
