@@ -633,17 +633,17 @@
           </div>
           <!-- 지도 필터 -->
           <div class="map-filter-bar">
-            <div class="map-filter-row">
-              <button class="map-filter-chip" :class="{active:mapFilter==='all'}" @click="setMapFilter('all')">전체</button>
-              <button class="map-filter-chip" :class="{active:mapFilter==='wish'}" @click="setMapFilter('wish')">🏷️ 태그</button>
-              <button class="map-filter-chip" :class="{active:mapFilter==='schedule'}" @click="setMapFilter('schedule')">📍 일정</button>
-            </div>
             <div class="map-filter-row" v-if="mapFilter!=='wish'">
               <button class="map-filter-chip" :class="{active:mapDayFilter===-1}" @click="setMapDayFilter(-1)">전체 Day</button>
               <button class="map-filter-chip" v-for="(_,i) in days" :key="'df'+i"
                 :class="{active:mapDayFilter===i}"
                 :style="mapDayFilter===i?{background:dayColor(i),color:'#fff',borderColor:dayColor(i)}:{}"
                 @click="setMapDayFilter(i)">Day {{ i+1 }}</button>
+            </div>
+            <div class="map-filter-row">
+              <button class="map-filter-chip" :class="{active:mapFilter==='all'}" @click="setMapFilter('all')">전체</button>
+              <button class="map-filter-chip" :class="{active:mapFilter==='wish'}" @click="setMapFilter('wish')">🏷️ 태그</button>
+              <button class="map-filter-chip" :class="{active:mapFilter==='schedule'}" @click="setMapFilter('schedule')">📍 일정</button>
             </div>
           </div>
         </div>
@@ -2241,9 +2241,12 @@ createApp({
     const mapDayFilter=ref(-1) // -1 = all, 0,1,2... = specific day
 
     function setMapFilter(f) {
+      const prevFilter = mapFilter.value
       mapFilter.value=f
       if (f==='wish') mapDayFilter.value=-1
       renderAllPins(); renderAllRoutes()
+      // 일정→전체 전환 시 (Day 필터 유지 중): 지도 이동 없이 태그만 추가 표시
+      if (f==='all' && prevFilter==='schedule') return
       if (f!=='wish') fitFilteredPins()
     }
     function setMapDayFilter(d) { mapDayFilter.value=d; renderAllPins(); renderAllRoutes(); fitFilteredPins() }
