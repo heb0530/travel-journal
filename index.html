@@ -203,11 +203,11 @@
     .pin-type-btn.active-confirmed { background:#c2410c; color:#fff; border-color:#c2410c; }
 
     /* 지도 필터 */
-    .map-filter-bar { position:absolute; bottom:12px; left:12px; z-index:5; display:flex; gap:4px; align-items:center; flex-wrap:wrap; max-width:calc(100% - 24px); }
+    .map-filter-bar { position:absolute; bottom:12px; left:12px; z-index:5; display:flex; flex-direction:column; gap:6px; max-width:calc(100% - 24px); }
+    .map-filter-row { display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
     .map-filter-chip { padding:5px 12px; border-radius:16px; font-size:.72rem; font-weight:600; cursor:pointer; border:1.5px solid rgba(0,0,0,.15); background:rgba(255,255,255,.92); color:var(--ink-2); transition:all .15s; backdrop-filter:blur(4px); box-shadow:0 1px 4px rgba(0,0,0,.1); }
     .map-filter-chip:hover { background:#fff; border-color:var(--ink); }
     .map-filter-chip.active { background:var(--ink); color:#fff; border-color:var(--ink); }
-    .map-filter-sep { color:rgba(0,0,0,.2); font-size:.7rem; padding:0 2px; }
 
     /* 사이드 패널 */
     .side-panel { width:300px; min-width:220px; max-width:500px; background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; position:relative; }
@@ -633,15 +633,18 @@
           </div>
           <!-- 지도 필터 -->
           <div class="map-filter-bar">
-            <button class="map-filter-chip" :class="{active:mapFilter==='all'}" @click="setMapFilter('all')">전체</button>
-            <button class="map-filter-chip" :class="{active:mapFilter==='wish'}" @click="setMapFilter('wish')">🏷️ 태그</button>
-            <button class="map-filter-chip" :class="{active:mapFilter==='schedule'}" @click="setMapFilter('schedule')">📍 일정</button>
-            <span class="map-filter-sep">|</span>
-            <button class="map-filter-chip" :class="{active:mapDayFilter===-1}" @click="setMapDayFilter(-1)">전체 Day</button>
-            <button class="map-filter-chip" v-for="(_,i) in days" :key="'df'+i"
-              :class="{active:mapDayFilter===i}"
-              :style="mapDayFilter===i?{background:dayColor(i),color:'#fff',borderColor:dayColor(i)}:{}"
-              @click="setMapDayFilter(i)">Day {{ i+1 }}</button>
+            <div class="map-filter-row">
+              <button class="map-filter-chip" :class="{active:mapFilter==='all'}" @click="setMapFilter('all')">전체</button>
+              <button class="map-filter-chip" :class="{active:mapFilter==='wish'}" @click="setMapFilter('wish')">🏷️ 태그</button>
+              <button class="map-filter-chip" :class="{active:mapFilter==='schedule'}" @click="setMapFilter('schedule')">📍 일정</button>
+            </div>
+            <div class="map-filter-row">
+              <button class="map-filter-chip" :class="{active:mapDayFilter===-1}" @click="setMapDayFilter(-1)">전체 Day</button>
+              <button class="map-filter-chip" v-for="(_,i) in days" :key="'df'+i"
+                :class="{active:mapDayFilter===i}"
+                :style="mapDayFilter===i?{background:dayColor(i),color:'#fff',borderColor:dayColor(i)}:{}"
+                @click="setMapDayFilter(i)">Day {{ i+1 }}</button>
+            </div>
           </div>
         </div>
         <button class="mobile-side-toggle" @click="mobileSideOpen=!mobileSideOpen">{{ mobileSideOpen ? '▼ 지도 보기' : '▲ 일정 보기' }}</button>
