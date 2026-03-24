@@ -1126,6 +1126,18 @@
           <label class="form-label">꾸러미로 저장하려면 이름 입력</label>
           <input class="form-input" v-model="importBundleName" placeholder="예: 도쿄 맛집, 파리 관광지..." />
         </div>
+        <div class="form-group" v-if="importBundleName.trim()">
+          <label class="form-label">공개 설정</label>
+          <div style="display:flex;gap:8px">
+            <button style="flex:1;padding:8px;border-radius:6px;font-size:.82rem;cursor:pointer;transition:all .15s"
+              :style="importBundleVisibility==='personal'?{background:'var(--ink)',color:'#fff',border:'1.5px solid var(--ink)'}:{background:'#fff',color:'var(--ink-2)',border:'1.5px solid var(--border)'}"
+              @click="importBundleVisibility='personal'">🔒 나만 보기</button>
+            <button style="flex:1;padding:8px;border-radius:6px;font-size:.82rem;cursor:pointer;transition:all .15s"
+              :style="importBundleVisibility==='public'?{background:'var(--ink)',color:'#fff',border:'1.5px solid var(--ink)'}:{background:'#fff',color:'var(--ink-2)',border:'1.5px solid var(--border)'}"
+              @click="importBundleVisibility='public'">🌐 전체 공개</button>
+          </div>
+          <div v-if="importBundleVisibility==='public'" style="font-size:.72rem;color:var(--muted);margin-top:4px">다른 사용자가 탐색에서 검색하고 사용할 수 있습니다</div>
+        </div>
         <div class="form-actions" style="flex-wrap:wrap;gap:8px">
           <button class="btn btn-cancel" @click="importStep='select';importPreviewPlaces=[]">← 뒤로</button>
           <div style="flex:1"></div>
@@ -2461,9 +2473,10 @@ createApp({
     const importProgress=ref(0)
     const importTotal=ref(0)
     const importBundleName=ref('')
+    const importBundleVisibility=ref('personal')
     const savedBundles=ref([])
 
-    function closeImportGuide(){ showImportGuide.value=false; importStep.value='select'; importPreviewPlaces.value=[]; importBundleName.value='' }
+    function closeImportGuide(){ showImportGuide.value=false; importStep.value='select'; importPreviewPlaces.value=[]; importBundleName.value=''; importBundleVisibility.value='personal' }
 
     function pickImportFile(){
       nextTick(()=>document.getElementById('import-file').click())
@@ -2565,7 +2578,7 @@ createApp({
         if(!importBundleName.value.trim()){ alert('꾸러미 이름을 입력해주세요.'); return }
         const exists=savedBundles.value.find(b=>b.name===importBundleName.value.trim())
         if(exists){ if(!confirm(`"${importBundleName.value}" 이름이 이미 있습니다. 덮어쓸까요?`)) return; savedBundles.value=savedBundles.value.filter(b=>b.name!==importBundleName.value.trim()) }
-        const newBundle = await saveBundleToDB(importBundleName.value.trim(), importPreviewPlaces.value)
+        const newBundle = await saveBundleToDB(importBundleName.value.trim(), importPreviewPlaces.value, importBundleVisibility.value)
         if (newBundle) savedBundles.value.push(newBundle)
         else savedBundles.value.push({ name:importBundleName.value.trim(), places:importPreviewPlaces.value })
       }
@@ -2697,7 +2710,7 @@ createApp({
       togglePinDone,
       showPinModal,editPin,pinModalStep,pinTypes,categoryList,categoryEmoji,orderOptions,onPinDayChange,openPinModal,savePin,deletePin,
       showLineMemo,editRoute,transportTypes,openLineMemo,saveRoute,
-      showImportGuide,importStep,importPreviewPlaces,importBundleName,importProgress,importTotal,savedBundles,
+      showImportGuide,importStep,importPreviewPlaces,importBundleName,importBundleVisibility,importProgress,importTotal,savedBundles,
       closeImportGuide,pickImportFile,importFile,loadSavedBundle,deleteSavedBundle,confirmImport,
       fitAllPins,focusPin,focusPinWithInfo,
       dragPin,dragOverPin,dragOverDay,startDrag,endDrag,dropOnPin,dropOnDay,
