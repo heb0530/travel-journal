@@ -130,8 +130,11 @@
     .feed-header { margin-bottom:32px; padding-top:28px; }
     .feed-header-title { font-family:Georgia,serif; font-size:1rem; font-weight:400; color:var(--muted); letter-spacing:.1em; }
     .feed-header-line { width:32px; height:1.5px; background:var(--muted); margin:10px 0 0; }
-    .feed-entry { margin-bottom:40px; }
-    .feed-entry-inner { padding:0; }
+    .feed-entry { margin-bottom:0; position:relative; padding-left:32px; }
+    .feed-entry::before { content:''; position:absolute; left:9px; top:0; bottom:0; width:2px; background:var(--border); }
+    .feed-entry:last-child::before { bottom:50%; }
+    .feed-entry-dot { position:absolute; left:3px; top:22px; width:14px; height:14px; border-radius:50%; border:2.5px solid var(--ink); background:var(--bg); z-index:1; }
+    .feed-entry-inner { padding:0 0 32px; }
     .feed-entry-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:16px 0 12px; border-bottom:1px solid var(--border); margin-bottom:0; }
     .feed-entry-header:hover { opacity:.7; }
     .feed-entry-kicker { font-family:'Courier New',monospace; font-size:.7rem; letter-spacing:.04em; color:var(--muted); display:flex; align-items:center; gap:8px; }
@@ -596,6 +599,7 @@
         <div class="feed-header-line"></div>
       </div>
       <div class="feed-entry" v-for="(trip, idx) in tripsWithStory" :key="'feed-'+trip.id">
+        <div class="feed-entry-dot"></div>
         <div class="feed-entry-inner">
           <!-- 여행 헤더 -->
           <div class="feed-entry-header" @click="feedExpanded[trip.id]=!feedExpanded[trip.id]">
