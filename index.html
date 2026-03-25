@@ -275,6 +275,9 @@
     .journal-photo img { width:100%; height:100%; object-fit:cover; display:block; }
     .journal-photo-del { position:absolute; top:5px; right:5px; background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:.7rem; cursor:pointer; opacity:0; transition:opacity .15s; display:flex; align-items:center; justify-content:center; }
     .journal-photo:hover .journal-photo-del { opacity:1; }
+    .journal-photo-order { position:absolute; top:5px; left:5px; display:flex; gap:4px; align-items:center; opacity:0; transition:opacity .15s; }
+    .journal-photo:hover .journal-photo-order { opacity:1; }
+    .journal-photo[draggable="true"]:active { opacity:.6; }
     .journal-photo-thumb { position:absolute; bottom:5px; left:5px; background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:4px; padding:2px 8px; font-size:.62rem; font-weight:700; cursor:pointer; opacity:0; transition:opacity .15s; letter-spacing:.3px; }
     .journal-photo:hover .journal-photo-thumb { opacity:1; }
     .journal-photo.is-thumbnail { outline:3px solid var(--ink); outline-offset:-3px; }
@@ -354,11 +357,13 @@
       .detail-topbar-dest { font-size:.68rem; }
       .detail-topbar .btn-sm, .detail-topbar .share-btn { font-size:.7rem; padding:4px 8px; }
       .back-btn { padding:4px 10px; font-size:.75rem; }
-      .side-panel { position:fixed; bottom:0; left:0; right:0; width:100% !important; max-width:100% !important; min-width:0; height:55vh; border-left:none; border-top:1px solid var(--border); border-radius:16px 16px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,.15); z-index:100; transform:translateY(100%); transition:transform .3s ease; }
+      .side-panel { position:fixed; bottom:0; left:0; right:0; width:100% !important; max-width:100% !important; min-width:0; height:60vh; border-left:none; border-top:1px solid var(--border); border-radius:16px 16px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,.15); z-index:100; transform:translateY(100%); transition:transform .3s ease; }
       .side-panel.mobile-open { transform:translateY(0); }
       .side-resize-handle { display:none; }
       .mobile-side-toggle { display:flex !important; }
       .map-wrapper { width:100% !important; }
+      .map-filter-bar { bottom:60px !important; }
+      .map-filter-chip { font-size:.65rem !important; padding:4px 8px !important; }
     }
     /* ── 공유 ── */
     .share-btn { padding:5px 14px; border:1px solid var(--border); border-radius:6px; background:#fff; font-size:.8rem; cursor:pointer; }
@@ -385,7 +390,8 @@
     .bundle-public-item { padding:12px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; }
     .bundle-public-meta { font-size:.75rem; color:var(--muted); margin-top:4px; }
 
-    .mobile-side-toggle { display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:99; padding:10px 24px; background:var(--ink); color:#fff; border:none; border-radius:24px; font-size:.85rem; font-weight:700; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.25); }
+    .mobile-side-toggle { display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:101; padding:10px 24px; background:var(--ink); color:#fff; border:none; border-radius:24px; font-size:.85rem; font-weight:700; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.25); transition:bottom .3s ease; }
+    .mobile-side-toggle.panel-open { bottom:calc(60vh + 8px); }
   </style>
 </head>
 <body>
@@ -647,7 +653,7 @@
             </div>
           </div>
         </div>
-        <button class="mobile-side-toggle" @click="mobileSideOpen=!mobileSideOpen">{{ mobileSideOpen ? '▼ 지도 보기' : '▲ 일정 보기' }}</button>
+        <button class="mobile-side-toggle" :class="{'panel-open':mobileSideOpen}" @click="mobileSideOpen=!mobileSideOpen">{{ mobileSideOpen ? '▼ 지도 보기' : '▲ 일정 보기' }}</button>
         <div class="side-panel" :class="{'mobile-open':mobileSideOpen}" ref="sidePanel">
           <div class="side-resize-handle" @mousedown="startSideResize"></div>
           <div class="side-tabs">
@@ -817,8 +823,18 @@
                 placeholder="오늘 여행은 어떠셨나요? 기억에 남는 순간을 기록해보세요..."></textarea>
               <div class="journal-photos-grid" v-if="getJournalPhotos(dayIdx).length">
                 <div class="journal-photo" v-for="(photo, pi) in getJournalPhotos(dayIdx)" :key="pi"
-                  :class="{'is-thumbnail': currentTrip.thumbnail===(photo.url||photo)}">
+                  :class="{'is-thumbnail': currentTrip.thumbnail===(photo.url||photo)}"
+                  draggable="true"
+                  @dragstart="journalPhotoDragIdx={day:dayIdx,idx:pi}"
+                  @dragover.prevent
+                  @drop.prevent="moveJournalPhoto(dayIdx,pi)"
+                  :style="{cursor:'grab'}">
                   <img :src="photo.url||photo" />
+                  <div class="journal-photo-order">
+                    <button v-if="pi>0" @click.stop="moveJournalPhotoDir(dayIdx,pi,-1)" style="background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:.7rem">◀</button>
+                    <span style="font-size:.65rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)">{{ pi+1 }}/{{ getJournalPhotos(dayIdx).length }}</span>
+                    <button v-if="pi<getJournalPhotos(dayIdx).length-1" @click.stop="moveJournalPhotoDir(dayIdx,pi,1)" style="background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:.7rem">▶</button>
+                  </div>
                   <button class="journal-photo-thumb" @click="setTripThumbnail(photo.url||photo)">{{ currentTrip.thumbnail===(photo.url||photo) ? '썸네일' : '썸네일 지정' }}</button>
                   <button class="journal-photo-del" @click="removeJournalPhoto(dayIdx,pi)">✕</button>
                 </div>
@@ -1623,12 +1639,17 @@ createApp({
       }
       // 지역 자동 추출 (여행 목적지에서)
       if (!region && currentTrip.value) region = currentTrip.value.destination || ''
-      const { data, error } = await sb.from('saved_bundles')
-        .insert({
-          user_id: user.id, name, places, visibility, region, category,
-          owner_name: user.user_metadata?.full_name || user.email,
-        }).select().single()
-      if (error) { console.error('saveBundle', error); return null }
+      const row = { user_id: user.id, name, places, visibility, owner_name: user.user_metadata?.full_name || user.email }
+      if (region) row.region = region
+      if (category) row.category = category
+      let { data, error } = await sb.from('saved_bundles').insert(row).select().single()
+      // region/category 컬럼 없으면 재시도
+      if (error && error.message?.includes('column')) {
+        delete row.region; delete row.category
+        const r2 = await sb.from('saved_bundles').insert(row).select().single()
+        data = r2.data; error = r2.error
+      }
+      if (error) { console.error('saveBundle', error); alert('꾸러미 저장 실패: ' + error.message); return null }
       return { _id: data.id, name: data.name, places: data.places, visibility: data.visibility }
     }
 
@@ -2053,6 +2074,26 @@ createApp({
     }
     function getJournalPhotos(dayIdx) { return getJournalEntry(dayIdx).photos||[] }
     function pickJournalPhoto(dayIdx) { document.getElementById('journal-photo-'+dayIdx)?.click() }
+    const journalPhotoDragIdx = ref(null)
+    function moveJournalPhoto(dayIdx, targetIdx) {
+      if (!journalPhotoDragIdx.value || journalPhotoDragIdx.value.day !== dayIdx) return
+      const fromIdx = journalPhotoDragIdx.value.idx
+      if (fromIdx === targetIdx) return
+      const photos = getJournalEntry(dayIdx).photos
+      const [moved] = photos.splice(fromIdx, 1)
+      photos.splice(targetIdx, 0, moved)
+      journalPhotoDragIdx.value = null
+      saveTrips()
+    }
+    function moveJournalPhotoDir(dayIdx, idx, dir) {
+      const photos = getJournalEntry(dayIdx).photos
+      const newIdx = idx + dir
+      if (newIdx < 0 || newIdx >= photos.length) return
+      const temp = photos[newIdx]
+      photos[newIdx] = photos[idx]
+      photos[idx] = temp
+      saveTrips()
+    }
     async function onJournalPhotoSelected(dayIdx,e) {
       const files=[...e.target.files]; if(!files.length)return
       const entry=getJournalEntry(dayIdx)
@@ -2997,6 +3038,7 @@ createApp({
       feedPhotoIdx,feedExpanded,feedPrev,feedNext,openTripJournal,
       journalEditDays,toggleJournalEdit,renderMarkdown,
       getJournalText,setJournalText,getJournalPhotos,pickJournalPhoto,onJournalPhotoSelected,removeJournalPhoto,
+      journalPhotoDragIdx,moveJournalPhoto,moveJournalPhotoDir,
     }
   }
 }).mount('#app')
