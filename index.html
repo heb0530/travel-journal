@@ -117,30 +117,25 @@
     .trip-card-new-icon { font-size:1.8rem; }
     .trip-card-new-text { font-size:.82rem; }
 
-    /* editorial feed */
-    .editorial-feed { max-width:1200px; margin:0 auto; padding:32px 48px 80px; background:var(--surface); border-radius:16px; box-shadow:0 1px 4px rgba(0,0,0,.04); }
-    .feed-header { display:flex; align-items:center; gap:24px; margin-bottom:56px; padding-top:40px; border-top:1px solid var(--border); }
-    .feed-header-title { font-family:Georgia,serif; font-size:1rem; font-weight:400; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; white-space:nowrap; }
-    .feed-entry { display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:start; padding:56px 0; border-bottom:1px solid var(--border); }
-    .feed-entry:last-child { border-bottom:none; }
-    .feed-entry.expanded { display:block; }
-    .feed-entry.expanded .feed-entry-text { display:block; }
-    .feed-entry.expanded .feed-entry-title { margin-bottom:24px; }
-    .feed-entry.expanded .feed-entry-media { float:left; width:42%; margin:0 32px 16px 0; }
-    .feed-entry.expanded .feed-entry-media.float-right { float:right; margin:0 0 16px 32px; }
-    .feed-entry.expanded .feed-entry-body { white-space:pre-line; }
-    .feed-entry.expanded::after { content:''; display:table; clear:both; }
-    .feed-entry-placeholder { width:100%; aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; font-size:4rem; border-radius:2px; background-size:cover !important; background-position:center !important; }
-    .feed-entry-text { display:flex; flex-direction:column; justify-content:flex-start; }
-    .feed-entry-kicker { font-size:.7rem; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-bottom:16px; }
-    .feed-entry-title { font-family:Georgia,serif; font-size:2rem; font-weight:400; color:var(--ink); line-height:1.2; margin-bottom:16px; }
-    .feed-entry-body { font-size:.9rem; color:var(--ink-2); line-height:1.85; margin-bottom:12px; white-space:pre-line; }
-    .feed-entry-body.collapsed { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
-    .feed-entry-actions { display:flex; align-items:center; gap:16px; margin-top:8px; }
-    .feed-entry-toggle { font-size:.82rem; color:var(--ink-2); cursor:pointer; background:var(--bg); border:1px solid var(--border); border-radius:16px; font-family:inherit; transition:all .15s; padding:6px 16px; font-weight:600; }
-    .feed-entry-toggle:hover { background:var(--ink); color:#fff; }
-    .feed-entry-toggle:hover { color:var(--ink); }
-    .feed-entry-cta { font-size:.82rem; font-weight:600; color:var(--ink); cursor:pointer; border-bottom:1.5px solid var(--ink); padding-bottom:2px; display:inline-block; transition:opacity .15s; background:none; border-left:none; border-top:none; border-right:none; font-family:inherit; }
+    /* editorial feed — blog style */
+    .editorial-feed { max-width:800px; margin:0 auto; padding:0 24px 80px; }
+    .feed-header { margin-bottom:32px; padding-top:32px; }
+    .feed-header-title { font-family:Georgia,serif; font-size:1.1rem; font-weight:400; color:var(--ink); letter-spacing:.02em; }
+    .feed-header-line { width:40px; height:2px; background:var(--ink); margin-top:8px; }
+    .feed-entry { background:var(--surface); border-radius:16px; overflow:hidden; margin-bottom:24px; box-shadow:0 1px 6px rgba(0,0,0,.06); transition:box-shadow .2s; display:block; padding:0; border:none; }
+    .feed-entry:hover { box-shadow:0 4px 20px rgba(0,0,0,.1); }
+    .feed-entry-img-wrap { width:100%; aspect-ratio:16/9; overflow:hidden; position:relative; }
+    .feed-entry-img-wrap img { width:100%; height:100%; object-fit:cover; }
+    .feed-entry-placeholder { width:100%; aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; font-size:3.5rem; background-size:cover !important; background-position:center !important; }
+    .feed-entry-content { padding:24px 28px 20px; }
+    .feed-entry-kicker { font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:10px; }
+    .feed-entry-title { font-family:Georgia,serif; font-size:1.4rem; font-weight:400; color:var(--ink); line-height:1.3; margin-bottom:12px; }
+    .feed-entry-body { font-size:.88rem; color:var(--ink-2); line-height:1.8; white-space:pre-line; }
+    .feed-entry-body.collapsed { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+    .feed-entry-actions { display:flex; align-items:center; gap:12px; margin-top:14px; padding-top:14px; border-top:1px solid #f0f0eb; }
+    .feed-entry-toggle { font-size:.82rem; color:var(--ink-2); cursor:pointer; background:var(--bg); border:1px solid var(--border); border-radius:20px; font-family:inherit; transition:all .15s; padding:7px 18px; font-weight:600; }
+    .feed-entry-toggle:hover { background:var(--ink); color:#fff; border-color:var(--ink); }
+    .feed-entry-cta { font-size:.82rem; font-weight:600; color:var(--ink); cursor:pointer; padding:7px 0; display:inline-block; transition:opacity .15s; background:none; border:none; font-family:inherit; text-decoration:underline; text-underline-offset:3px; }
     .feed-entry-cta:hover { opacity:.5; }
     .feed-empty { text-align:center; padding:80px 0; color:var(--muted); font-size:.88rem; line-height:2; }
 
@@ -341,15 +336,16 @@
       .main-topbar-right .user-btn { padding:4px 8px; font-size:.72rem; }
       .main-topbar-right .user-btn span { max-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; }
       .main-hero { padding:48px 20px 0; }
-      .main-hero-title { font-size:2.4rem; }
+      .main-hero-title { font-size:1.8rem; word-break:keep-all; }
+      .main-hero { padding:32px 16px 0 !important; }
       .map-search-overlay { flex-direction:column; align-items:flex-start; }
       .search-box { width:280px; }
       .trips-section { padding:20px 16px 32px; margin:0 8px 16px; border-radius:12px; }
       .trips-grid { grid-template-columns:1fr 1fr; }
-      .editorial-feed { padding:20px 16px 40px; margin:0 8px; border-radius:12px; }
-      .feed-entry { grid-template-columns:1fr; gap:24px; }
-      .feed-entry.expanded .feed-entry-media { float:none; width:100%; margin:0 0 20px 0; }
-      .feed-entry.expanded .feed-entry-media.float-right { float:none; margin:0 0 20px 0; }
+      .editorial-feed { padding:0 8px 40px; }
+      .feed-entry-content { padding:16px 18px 14px; }
+      .feed-entry-title { font-size:1.15rem; }
+      .feed-entry { border-radius:12px; }
       .journal-inner { padding:24px 20px; }
       .journal-view-photos { grid-template-columns:1fr; }
       .feed-entry-title { font-size:1.4rem; }
@@ -584,65 +580,30 @@
       </div>
     </div>
 
-    <!-- editorial feed -->
+    <!-- editorial feed — blog cards -->
     <div class="editorial-feed" v-if="tripsWithStory.length>0">
       <div class="feed-header">
         <span class="feed-header-title">여행 이야기</span>
+        <div class="feed-header-line"></div>
       </div>
-      <div class="feed-entry" v-for="(trip, idx) in tripsWithStory" :key="'feed-'+trip.id"
-        :class="{expanded:feedExpanded[trip.id]}">
-        <!-- 접힌 상태: 2컬럼 그리드 -->
-        <template v-if="!feedExpanded[trip.id]">
-          <div :style="{order: idx%2!==0 ? 2 : 0}">
-            <div class="feed-carousel" v-if="tripAllPhotos(trip).length">
-              <img :src="(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])?.url||(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])" class="feed-carousel-img" />
-              <button class="feed-carousel-btn feed-carousel-prev" v-if="tripAllPhotos(trip).length>1" @click.stop="feedPrev(trip)">‹</button>
-              <button class="feed-carousel-btn feed-carousel-next" v-if="tripAllPhotos(trip).length>1" @click.stop="feedNext(trip)">›</button>
-              <div class="feed-carousel-dots" v-if="tripAllPhotos(trip).length>1">
-                <button class="feed-carousel-dot" v-for="(_, pi) in tripAllPhotos(trip)" :key="pi"
-                  :class="{active:(feedPhotoIdx[trip.id]||0)===pi}"
-                  @click.stop="feedPhotoIdx[trip.id]=pi"></button>
-              </div>
-            </div>
-            <div v-else class="feed-entry-placeholder" :style="themeStyle(trip.theme)">{{ trip.flag }}</div>
+      <div class="feed-entry" v-for="(trip, idx) in tripsWithStory" :key="'feed-'+trip.id">
+        <!-- 커버 이미지 -->
+        <div class="feed-entry-img-wrap" v-if="tripAllPhotos(trip).length" @click="openTripJournal(trip)" style="cursor:pointer">
+          <img :src="(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])?.url||(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])" />
+          <button class="feed-carousel-btn feed-carousel-prev" v-if="tripAllPhotos(trip).length>1" @click.stop="feedPrev(trip)" style="position:absolute;top:50%;left:10px;transform:translateY(-50%)">‹</button>
+          <button class="feed-carousel-btn feed-carousel-next" v-if="tripAllPhotos(trip).length>1" @click.stop="feedNext(trip)" style="position:absolute;top:50%;right:10px;transform:translateY(-50%)">›</button>
+        </div>
+        <div v-else class="feed-entry-placeholder" :style="themeStyle(trip.theme)" @click="openTripJournal(trip)" style="cursor:pointer">{{ trip.flag }}</div>
+        <!-- 본문 -->
+        <div class="feed-entry-content">
+          <div class="feed-entry-kicker">{{ trip.flag }} {{ trip.destination }} · {{ trip.startDate }}</div>
+          <div class="feed-entry-title">{{ trip.name }}</div>
+          <div class="feed-entry-body" :class="{collapsed:!feedExpanded[trip.id]}">{{ tripFullText(trip) }}</div>
+          <div class="feed-entry-actions">
+            <button class="feed-entry-toggle" v-if="tripFullText(trip).length>80" @click.stop="feedExpanded[trip.id]=!feedExpanded[trip.id]">{{ feedExpanded[trip.id] ? '접기' : '펼치기' }}</button>
+            <button class="feed-entry-cta" @click.stop="openTripJournal(trip)">여행 보러 가기 →</button>
           </div>
-          <div class="feed-entry-text">
-            <div class="feed-entry-kicker">{{ trip.destination }} · {{ trip.startDate }}</div>
-            <div class="feed-entry-title">{{ trip.name }}</div>
-            <div class="feed-entry-body collapsed">{{ tripFullText(trip) }}</div>
-            <div class="feed-entry-actions">
-              <button class="feed-entry-toggle" v-if="tripFullText(trip).length>120" @click.stop="feedExpanded[trip.id]=true">펼치기</button>
-              <button class="feed-entry-cta" @click.stop="openTripJournal(trip)">여행 보러 가기 →</button>
-            </div>
-          </div>
-        </template>
-        <!-- 펼친 상태: 제목 → 사진 float + 글 감싸기 -->
-        <template v-else>
-          <div class="feed-entry-text">
-            <div class="feed-entry-kicker">{{ trip.destination }} · {{ trip.startDate }}</div>
-            <div class="feed-entry-title">{{ trip.name }}</div>
-            <!-- 사진이 제목 아래에서 float -->
-            <div class="feed-entry-media" :class="{'float-right': idx%2!==0}">
-              <div class="feed-carousel" v-if="tripAllPhotos(trip).length">
-                <img :src="(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])?.url||(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])" class="feed-carousel-img" />
-                <button class="feed-carousel-btn feed-carousel-prev" v-if="tripAllPhotos(trip).length>1" @click.stop="feedPrev(trip)">‹</button>
-                <button class="feed-carousel-btn feed-carousel-next" v-if="tripAllPhotos(trip).length>1" @click.stop="feedNext(trip)">›</button>
-                <div class="feed-carousel-dots" v-if="tripAllPhotos(trip).length>1">
-                  <button class="feed-carousel-dot" v-for="(_, pi) in tripAllPhotos(trip)" :key="pi"
-                    :class="{active:(feedPhotoIdx[trip.id]||0)===pi}"
-                    @click.stop="feedPhotoIdx[trip.id]=pi"></button>
-                </div>
-              </div>
-              <div v-else class="feed-entry-placeholder" :style="themeStyle(trip.theme)" style="border-radius:2px">{{ trip.flag }}</div>
-            </div>
-            <div class="feed-entry-body">{{ tripFullText(trip) }}</div>
-            <div style="clear:both"></div>
-            <div class="feed-entry-actions">
-              <button class="feed-entry-toggle" @click.stop="feedExpanded[trip.id]=false">요약</button>
-              <button class="feed-entry-cta" @click.stop="openTripJournal(trip)">여행 보러 가기 →</button>
-            </div>
-          </div>
-        </template>
+        </div>
       </div>
     </div>
   </div>
