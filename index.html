@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>여행 일지</title>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://unpkg.com/marked@12/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -390,11 +391,17 @@
     .bundle-public-item { padding:12px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; }
     .bundle-public-meta { font-size:.75rem; color:var(--muted); margin-top:4px; }
 
+    /* 토스트 */
+    .toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 24px; border-radius:24px; font-size:.85rem; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,.25); animation:toastIn .3s ease,toastOut .3s ease 2.5s forwards; pointer-events:none; }
+    @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+    @keyframes toastOut { from{opacity:1} to{opacity:0} }
+
     .mobile-side-toggle { display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:101; padding:10px 24px; background:var(--ink); color:#fff; border:none; border-radius:24px; font-size:.85rem; font-weight:700; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.25); transition:bottom .3s ease; }
     .mobile-side-toggle.panel-open { bottom:calc(55dvh + 8px); }
   </style>
 </head>
 <body>
+<div id="toast-container"></div>
 <div id="app" style="display:none">
 
   <!-- ① 로그인 화면 -->
@@ -601,6 +608,7 @@
   <div class="detail-page" v-if="view==='map' && currentTrip">
     <div class="detail-topbar">
       <button class="back-btn" @click="goBack">{{ shareTokenFromURL ? '← 홈' : '← 뒤로' }}</button>
+      <button v-if="shareTokenFromURL&&!currentUser" class="btn btn-sm btn-save" style="margin-left:auto;order:99" @click="window.location.href=window.location.origin">✨ 나도 만들기</button>
       <div>
         <div class="detail-topbar-title">{{ currentTrip.flag }} {{ currentTrip.name }}</div>
         <div class="detail-topbar-dest">
@@ -1144,7 +1152,7 @@
           </div>
         </div>
         <button class="btn btn-save" style="width:100%" @click="fetchRecommendations" :disabled="recLoading||(!recUseMapCenter&&!recRegion.trim())">
-          {{ recLoading ? '검색 중... ('+recProgress+'/'+recTotal+')' : '✨ 추천 장소 검색' }}
+          {{ recLoading ? '검색 중... ('+recProgress+'/'+recTotal+')' : '✨ 추천 장소 검색 (오늘 '+apiRemaining+'회 남음)' }}
         </button>
         <div v-if="recResults.length>0" style="margin-top:14px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1293,6 +1301,38 @@
 <script>
 const { createApp, ref, computed, onMounted, watch, nextTick } = Vue
 
+// ── 토스트 알림 ──
+function showToast(msg) {
+  const c=document.getElementById('toast-container')
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg
+  c.appendChild(t); setTimeout(()=>t.remove(),3000)
+}
+
+// ── Places API 사용 제한 ──
+const ADMIN_EMAILS = ['heb0530@gmail.com'] // 관리자 이메일
+const DAILY_LIMIT_KEY = 'places_api_usage'
+function getApiUsageToday() {
+  const stored = JSON.parse(localStorage.getItem(DAILY_LIMIT_KEY)||'{}')
+  const today = new Date().toISOString().slice(0,10)
+  if (stored.date !== today) return { date:today, count:0 }
+  return stored
+}
+function incrementApiUsage() {
+  const usage = getApiUsageToday()
+  usage.count++
+  localStorage.setItem(DAILY_LIMIT_KEY, JSON.stringify(usage))
+  return usage.count
+}
+function canUseExpensiveApi(userEmail) {
+  if (ADMIN_EMAILS.includes(userEmail)) return true
+  const usage = getApiUsageToday()
+  return usage.count < 3
+}
+function getApiRemainingToday(userEmail) {
+  if (ADMIN_EMAILS.includes(userEmail)) return 999
+  return Math.max(0, 3 - getApiUsageToday().count)
+}
+
 function _mkThemeSvg(svg){return "url(\"data:image/svg+xml,"+encodeURIComponent(svg)+'")'}
 const THEMES = [
   // 🌸 봄
@@ -1416,6 +1456,7 @@ createApp({
       } else if (session) {
         currentUser.value = session.user
         view.value = 'shelf'
+        apiRemaining.value = getApiRemainingToday(session.user.email)
         loadTripsFromDB()
         loadSharedTrips()
         checkLocalMigration()
@@ -1849,7 +1890,7 @@ createApp({
 
     function copyShareLink() {
       navigator.clipboard.writeText(shareLink.value)
-      alert('링크가 복사되었습니다!')
+      showToast('링크가 복사되었습니다!')
     }
 
     async function inviteUser() {
@@ -1998,9 +2039,17 @@ createApp({
       return recResults.value.filter((_,i) => recSelectedIds.value.has(i))
     }
 
+    const apiRemaining = ref(getApiRemainingToday(''))
     async function fetchRecommendations() {
       if (!recRegion.value.trim() && !recUseMapCenter.value) return
-      if (!window.google) { alert('지도가 로드되지 않았습니다.'); return }
+      if (!window.google) { showToast('지도가 로드되지 않았습니다.'); return }
+      const email = currentUser.value?.email || ''
+      if (!canUseExpensiveApi(email)) {
+        showToast('오늘 추천 검색 횟수(3회)를 모두 사용했습니다.')
+        return
+      }
+      incrementApiUsage()
+      apiRemaining.value = getApiRemainingToday(email)
       recLoading.value = true
       recResults.value = []
       recSelectedIds.value = new Set()
@@ -2086,7 +2135,7 @@ createApp({
         currentTrip.value.pins.push(pin)
         added++
       }
-      alert(`${added}곳이 태그로 추가되었습니다!`)
+      showToast(`${added}곳이 태그로 추가되었습니다!`)
       closeImportGuide()
       renderAllPins()
     }
@@ -2098,7 +2147,7 @@ createApp({
       const newBundle = await saveBundleToDB(name.trim(), selected, 'public', recRegion.value||currentTrip.value?.destination||'')
       if (newBundle) {
         savedBundles.value.push(newBundle)
-        alert(`"${name.trim()}" 꾸러미가 전체 공개로 저장되었습니다!`)
+        showToast(`"${name.trim()}" 꾸러미가 전체 공개로 저장되었습니다!`)
       }
     }
 
@@ -2124,16 +2173,17 @@ createApp({
     }
     const journalEditDays = ref({})
     function toggleJournalEdit(dayIdx) { journalEditDays.value[dayIdx]=!journalEditDays.value[dayIdx] }
+    function sanitize(html) { return window.DOMPurify ? DOMPurify.sanitize(html) : html }
     function renderMarkdown(text) {
       if(!text) return ''
       try {
         const m=window.marked
         if(m){
           const parse=m.parse||m.marked?.parse
-          if(parse) return parse(text,{breaks:true})
+          if(parse) return sanitize(parse(text,{breaks:true}))
         }
       } catch(e){ console.warn('marked error',e) }
-      return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')
+      return sanitize(text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>'))
     }
     function getJournalText(dayIdx) { return getJournalEntry(dayIdx).text }
     function setJournalText(dayIdx,text) {
@@ -2162,14 +2212,19 @@ createApp({
       photos[idx] = temp
       saveTrips()
     }
+    const photoUploading = ref(false)
     async function onJournalPhotoSelected(dayIdx,e) {
       const files=[...e.target.files]; if(!files.length)return
       const entry=getJournalEntry(dayIdx)
       if(!entry.photos) entry.photos=[]
+      photoUploading.value = true
+      showToast(`사진 ${files.length}장 업로드 중...`)
       for (const file of files) {
         const photo = await uploadPhotoToDB(currentTrip.value.id, dayIdx, file)
         if (photo) entry.photos.push(photo)
       }
+      photoUploading.value = false
+      showToast(`사진 ${files.length}장 업로드 완료!`)
       e.target.value=''
     }
     async function removeJournalPhoto(dayIdx,photoIdx) {
@@ -2751,7 +2806,7 @@ createApp({
       const newBundle = await saveBundleToDB(name, places, tagBundleVisibility.value)
       if (newBundle) {
         savedBundles.value.push(newBundle)
-        alert(`"${name}" 꾸러미가 ${tagBundleVisibility.value==='public'?'전체 공개로':'나만 보기로'} 저장되었습니다!`)
+        showToast(`"${name}" 꾸러미가 ${tagBundleVisibility.value==='public'?'전체 공개로':'나만 보기로'} 저장되었습니다!`)
       }
       showSaveTagBundle.value = false
       tagBundleName.value = ''
@@ -2898,6 +2953,13 @@ createApp({
 
     // Google Maps 저장 목록 CSV 파싱 (제목,메모,URL,태그,댓글)
     async function parseGoogleCSV(text) {
+      const email = currentUser.value?.email || ''
+      if (!canUseExpensiveApi(email)) {
+        showToast('오늘 API 사용 횟수(3회)를 모두 사용했습니다.')
+        return []
+      }
+      incrementApiUsage()
+      apiRemaining.value = getApiRemainingToday(email)
       const lines=text.trim().split('\n').filter(l=>l.trim())
       if(lines.length<2) return []
       const places=[]
@@ -3096,7 +3158,7 @@ createApp({
       sharedTrips,sharedTripRole,canEdit,openSharedTrip,
       publicBundles,bundleSearchQuery,bundleCategoryFilter,bundleCategoryOptions,searchPublicBundles,loadPublicBundle,bundlePlaceCats,
       recRegion,recCategory,recCategories,recResults,recLoading,recProgress,recTotal,recCatEmoji,
-      recUseMapCenter,recSelectedIds,recToggleSelect,recSelectAll,
+      recUseMapCenter,recSelectedIds,recToggleSelect,recSelectAll,apiRemaining,
       fetchRecommendations,recApplyAsTags,recSaveAsBundle,
       trips,currentTrip,confirmedCount,themeStyle,goBack,openTrip,detailTab,
       THEMES,showTripModal,tripModalMode,tripForm,openNewTripModal,openEditTripModal,closeTripModal,saveTripModal,deleteTrip,calcDays,
@@ -3117,7 +3179,7 @@ createApp({
       tripCoverPhoto,tripSummaryText,tripAllPhotos,tripFullText,tripsWithStory,setTripThumbnail,
       feedPhotoIdx,feedExpanded,feedPrev,feedNext,openTripJournal,
       journalEditDays,toggleJournalEdit,renderMarkdown,
-      getJournalText,setJournalText,getJournalPhotos,pickJournalPhoto,onJournalPhotoSelected,removeJournalPhoto,
+      getJournalText,setJournalText,getJournalPhotos,pickJournalPhoto,onJournalPhotoSelected,removeJournalPhoto,photoUploading,
       journalPhotoDragIdx,moveJournalPhoto,moveJournalPhotoDir,
     }
   }
