@@ -391,6 +391,23 @@
     .bundle-public-item { padding:12px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; }
     .bundle-public-meta { font-size:.75rem; color:var(--muted); margin-top:4px; }
 
+    /* 커뮤니티 */
+    .community-page { min-height:100vh; min-height:100dvh; background:var(--bg); }
+    .community-topbar { display:flex; align-items:center; gap:16px; padding:0 48px; height:64px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:50; }
+    .community-body { max-width:1200px; margin:0 auto; padding:32px 48px 80px; }
+    .community-search { width:100%; max-width:400px; padding:10px 16px; border:1.5px solid var(--border); border-radius:8px; font-size:.88rem; background:#fff; }
+    .community-search:focus { outline:none; border-color:var(--ink); }
+    .community-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; margin-top:24px; }
+    .community-card { background:#fff; border-radius:12px; overflow:hidden; border:1px solid var(--border); cursor:pointer; transition:all .15s; }
+    .community-card:hover { box-shadow:0 4px 20px rgba(0,0,0,.08); transform:translateY(-2px); }
+    .community-card-img { width:100%; height:160px; object-fit:cover; }
+    .community-card-placeholder { width:100%; height:160px; display:flex; align-items:center; justify-content:center; font-size:2.5rem; background-size:cover !important; background-position:center !important; }
+    .community-card-body { padding:14px 16px; }
+    .community-card-name { font-family:Georgia,serif; font-size:1rem; font-weight:400; margin-bottom:4px; }
+    .community-card-meta { font-size:.75rem; color:var(--muted); line-height:1.6; }
+    .community-card-owner { font-size:.78rem; color:var(--ink-2); margin-top:6px; }
+    @media (max-width:480px) { .community-body { padding:16px; } .community-topbar { padding:0 16px; } }
+
     /* 토스트 */
     .toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 24px; border-radius:24px; font-size:.85rem; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,.25); animation:toastIn .3s ease,toastOut .3s ease 2.5s forwards; pointer-events:none; }
     @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
@@ -417,6 +434,7 @@
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
         Google로 로그인
       </button>
+      <button style="margin-top:16px;background:none;border:none;color:var(--muted);font-size:.85rem;cursor:pointer;text-decoration:underline" @click="openCommunity">🌍 다른 사람들의 여행 둘러보기</button>
     </div>
   </div>
 
@@ -466,6 +484,7 @@
     <div class="main-topbar">
       <div class="main-logo">여행 일지</div>
       <div class="main-topbar-right" style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-sm" style="background:var(--bg);color:var(--ink);border:1px solid var(--border)" @click="openCommunity">🌍 커뮤니티</button>
         <button class="btn btn-sm btn-save" @click="openNewTripModal">+ 새 여행</button>
         <div class="user-menu">
           <button class="user-btn" @click="showUserMenu=!showUserMenu">
@@ -600,6 +619,43 @@
             </div>
           </div>
         </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- 커뮤니티 페이지 -->
+  <div class="community-page" v-if="view==='community'">
+    <div class="community-topbar">
+      <button class="back-btn" @click="view='shelf'">← 뒤로</button>
+      <div class="main-logo">🌍 여행 커뮤니티</div>
+    </div>
+    <div class="community-body">
+      <div style="text-align:center;margin-bottom:24px">
+        <h2 style="font-family:Georgia,serif;font-weight:400;font-size:1.5rem;margin-bottom:8px">다른 사람들의 여행을 둘러보세요</h2>
+        <p style="color:var(--muted);font-size:.88rem">전체 공개된 여행 일정과 일기를 확인할 수 있어요</p>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
+        <input class="community-search" v-model="communitySearch" placeholder="여행 이름, 목적지 검색..." @input="searchCommunityTrips" />
+      </div>
+      <div v-if="communityLoading" style="text-align:center;padding:40px;color:var(--muted)">
+        <div class="spinner"></div> 불러오는 중...
+      </div>
+      <div v-else-if="communityTrips.length===0" style="text-align:center;padding:40px;color:var(--muted);font-size:.88rem">
+        공개된 여행이 없습니다
+      </div>
+      <div class="community-grid" v-else>
+        <div class="community-card" v-for="trip in communityTrips" :key="trip.id" @click="openCommunityTrip(trip)">
+          <div v-if="trip.thumbnail" style="width:100%;height:160px;overflow:hidden">
+            <img :src="trip.thumbnail" class="community-card-img" />
+          </div>
+          <div v-else class="community-card-placeholder" :style="themeStyle(trip.theme)">{{ trip.flag }}</div>
+          <div class="community-card-body">
+            <div class="community-card-name">{{ trip.flag }} {{ trip.name }}</div>
+            <div class="community-card-meta">{{ trip.destination }} · {{ trip.startDate }}~{{ trip.endDate }}</div>
+            <div class="community-card-meta">📍 {{ (trip.pins||[]).length }}곳 · 📖 Day {{ trip.days }}</div>
+            <div class="community-card-owner">by {{ trip.owner_name || '익명' }}</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -871,6 +927,35 @@
           </div>
           <div v-if="days.length===0" style="text-align:center;color:var(--muted);padding:60px 0;font-size:.88rem">
             여행 날짜를 설정하면 Day별로 기록할 수 있어요
+          </div>
+
+          <!-- 자유 페이지 -->
+          <div style="margin-top:32px;border-top:2px solid var(--border);padding-top:24px" v-if="currentTrip">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <span style="font-family:Georgia,serif;font-size:1.1rem">📝 자유 페이지</span>
+              <button v-if="canEdit" class="btn btn-sm btn-save" @click="addFreePage">+ 페이지 추가</button>
+            </div>
+            <div v-if="(currentTrip.freePages||[]).length===0" style="text-align:center;color:var(--muted);font-size:.85rem;padding:20px 0">
+              Day와 별개로 자유롭게 기록할 수 있는 페이지입니다
+            </div>
+            <div class="journal-day" v-for="(page, pi) in (currentTrip.freePages||[])" :key="'fp'+pi">
+              <div class="journal-day-header">
+                <template v-if="freePageEditTitle===pi">
+                  <input class="form-input" :value="page.title" @blur="saveFreePageTitle(pi,$event.target.value)" @keyup.enter="$event.target.blur()" style="font-size:.9rem;padding:4px 8px;flex:1" />
+                </template>
+                <span v-else class="journal-day-num" style="cursor:pointer" @click="freePageEditTitle=pi">{{ page.title || '제목 없음' }}</span>
+                <div class="journal-day-divider"></div>
+                <button v-if="canEdit" class="journal-mode-btn" @click="toggleFreePageEdit(pi)">{{ freePageEditing[pi] ? '저장' : '수정' }}</button>
+                <button v-if="canEdit" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:.8rem;margin-left:4px" @click="deleteFreePage(pi)">✕</button>
+              </div>
+              <template v-if="freePageEditing[pi]&&canEdit">
+                <textarea class="journal-textarea" :value="page.text" @input="page.text=$event.target.value;saveTrips()" placeholder="자유롭게 기록하세요..."></textarea>
+              </template>
+              <template v-else>
+                <div v-if="page.text" class="journal-view-text" v-html="renderMarkdown(page.text)"></div>
+                <div v-else class="journal-view-empty">수정 버튼을 눌러 기록을 남겨보세요.</div>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -1512,7 +1597,7 @@ createApp({
         theme:row.theme||{}, days:row.days||1,
         dayColors:row.day_colors||[], thumbnail:row.thumbnail,
         visibility:row.visibility||'personal', share_token:row.share_token,
-        owner_name:row.owner_name,
+        owner_name:row.owner_name, freePages:row.free_pages||[],
         pins:(row.pins||[]).map(mapPinFromDB),
         routes:(row.routes||[]).map(mapRouteFromDB),
         journal: buildJournalArray(row.journals||[], row.days||1),
@@ -1574,6 +1659,7 @@ createApp({
         start_date: trip.startDate, end_date: trip.endDate,
         theme: trip.theme, days: trip.days,
         day_colors: trip.dayColors, thumbnail: trip.thumbnail,
+        free_pages: trip.freePages || [],
         updated_at: new Date().toISOString(),
       }
       if (trip._isNew) {
@@ -2149,6 +2235,72 @@ createApp({
         savedBundles.value.push(newBundle)
         showToast(`"${name.trim()}" 꾸러미가 전체 공개로 저장되었습니다!`)
       }
+    }
+
+    // ── 커뮤니티 ─────────────────────────────
+    const communityTrips = ref([])
+    const communitySearch = ref('')
+    const communityLoading = ref(false)
+
+    async function openCommunity() {
+      view.value = 'community'
+      communityLoading.value = true
+      await searchCommunityTrips()
+      communityLoading.value = false
+    }
+
+    async function searchCommunityTrips() {
+      let q = sb.from('trips')
+        .select('*, pins(id), journals(id)')
+        .eq('visibility', 'public')
+        .order('created_at', { ascending: false })
+        .limit(30)
+      if (communitySearch.value.trim()) {
+        q = q.or(`name.ilike.%${communitySearch.value}%,destination.ilike.%${communitySearch.value}%,owner_name.ilike.%${communitySearch.value}%`)
+      }
+      const { data } = await q
+      communityTrips.value = (data||[]).map(t => ({
+        id: t.id, name: t.name, destination: t.destination,
+        flag: t.flag, startDate: t.start_date, endDate: t.end_date,
+        theme: t.theme, days: t.days, thumbnail: t.thumbnail,
+        owner_name: t.owner_name, share_token: t.share_token,
+        pins: t.pins||[], visibility: t.visibility, user_id: t.user_id,
+      }))
+    }
+
+    function openCommunityTrip(trip) {
+      // share link로 이동
+      window.location.href = `${window.location.origin}/share/${trip.share_token}`
+    }
+
+    // ── 자유 페이지 ─────────────────────────────
+    const freePageEditing = ref({})
+    const freePageEditTitle = ref(-1)
+
+    function addFreePage() {
+      if (!currentTrip.value) return
+      if (!currentTrip.value.freePages) currentTrip.value.freePages = []
+      currentTrip.value.freePages.push({ title: `페이지 ${currentTrip.value.freePages.length+1}`, text: '' })
+      freePageEditing.value[currentTrip.value.freePages.length-1] = true
+      saveTrips()
+    }
+
+    function toggleFreePageEdit(pi) {
+      freePageEditing.value[pi] = !freePageEditing.value[pi]
+      if (!freePageEditing.value[pi]) saveTrips()
+    }
+
+    function saveFreePageTitle(pi, title) {
+      if (!currentTrip.value?.freePages?.[pi]) return
+      currentTrip.value.freePages[pi].title = title
+      freePageEditTitle.value = -1
+      saveTrips()
+    }
+
+    function deleteFreePage(pi) {
+      if (!confirm('이 페이지를 삭제할까요?')) return
+      currentTrip.value.freePages.splice(pi, 1)
+      saveTrips()
     }
 
     const sideTab = ref('schedule')
@@ -3160,6 +3312,8 @@ createApp({
       recRegion,recCategory,recCategories,recResults,recLoading,recProgress,recTotal,recCatEmoji,
       recUseMapCenter,recSelectedIds,recToggleSelect,recSelectAll,apiRemaining,
       fetchRecommendations,recApplyAsTags,recSaveAsBundle,
+      communityTrips,communitySearch,communityLoading,openCommunity,searchCommunityTrips,openCommunityTrip,
+      freePageEditing,freePageEditTitle,addFreePage,toggleFreePageEdit,saveFreePageTitle,deleteFreePage,
       trips,currentTrip,confirmedCount,themeStyle,goBack,openTrip,detailTab,
       THEMES,showTripModal,tripModalMode,tripForm,openNewTripModal,openEditTripModal,closeTripModal,saveTripModal,deleteTrip,calcDays,
       mapTheme,toggleMapTheme,showColorPanel,mapFilter,mapDayFilter,setMapFilter,setMapDayFilter,
