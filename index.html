@@ -1149,8 +1149,8 @@
             <select v-if="shareVisibility==='public'||shareVisibility==='public_edit'"
               :value="shareVisibility" @change="shareVisibility=$event.target.value" @click.stop
               style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:#fff">
-              <option value="public">👁️ 조회만</option>
-              <option value="public_edit">✏️ 편집 가능</option>
+              <option value="public">조회만</option>
+              <option value="public_edit">편집 가능</option>
             </select>
           </div>
           <div class="vis-option" :class="{active:shareVisibility==='invite'}" @click="shareVisibility='invite'">
