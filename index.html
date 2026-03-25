@@ -125,31 +125,28 @@
     .trip-card-new-icon { font-size:1.8rem; }
     .trip-card-new-text { font-size:.82rem; }
 
-    /* editorial feed — diary timeline */
-    .editorial-feed { max-width:720px; margin:0 auto; padding:0 24px 80px; }
-    .feed-header { margin-bottom:28px; padding-top:24px; }
-    .feed-header-title { font-family:Georgia,serif; font-size:1.1rem; font-weight:400; color:var(--ink); }
-    .feed-header-line { width:40px; height:2px; background:var(--ink); margin-top:8px; }
-    .feed-entry { position:relative; padding:0 0 0 28px; margin-bottom:0; border:none; display:block; }
-    .feed-entry::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:2px; background:var(--border); }
-    .feed-entry:last-child::before { bottom:50%; }
-    .feed-entry-dot { position:absolute; left:2px; top:24px; width:14px; height:14px; border-radius:50%; background:var(--surface); border:2.5px solid var(--ink); z-index:1; }
-    .feed-entry-inner { background:rgba(255,255,255,.5); border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid rgba(232,232,224,.5); backdrop-filter:blur(2px); }
-    .feed-entry-kicker { font-family:'Courier New',monospace; font-size:.7rem; letter-spacing:.04em; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
-    .feed-entry-title { font-family:Georgia,serif; font-size:1.2rem; font-weight:400; color:var(--ink); line-height:1.35; margin-bottom:12px; cursor:pointer; }
-    .feed-entry-title:hover { text-decoration:underline; text-underline-offset:3px; }
-    .feed-entry-photos { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; border-radius:8px; overflow:hidden; }
-    .feed-entry-photos.single { grid-template-columns:1fr; }
-    .feed-entry-photos img { width:100%; aspect-ratio:4/3; object-fit:cover; cursor:pointer; }
-    .feed-entry-body { font-family:Georgia,serif; font-size:.9rem; color:var(--ink-2); line-height:1.9; white-space:pre-line; }
-    .feed-entry-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:4px 0; }
-    .feed-entry-header:hover .feed-entry-title { text-decoration:underline; text-underline-offset:3px; }
+    /* editorial feed — brunch-style diary */
+    .editorial-feed { max-width:640px; margin:0 auto; padding:0 24px 80px; }
+    .feed-header { margin-bottom:32px; padding-top:28px; text-align:center; }
+    .feed-header-title { font-family:Georgia,serif; font-size:1rem; font-weight:400; color:var(--muted); letter-spacing:.1em; }
+    .feed-header-line { width:32px; height:1.5px; background:var(--muted); margin:10px auto 0; }
+    .feed-entry { margin-bottom:40px; }
+    .feed-entry-inner { padding:0; }
+    .feed-entry-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:16px 0 12px; border-bottom:1px solid var(--border); margin-bottom:0; }
+    .feed-entry-header:hover { opacity:.7; }
+    .feed-entry-kicker { font-family:'Courier New',monospace; font-size:.7rem; letter-spacing:.04em; color:var(--muted); display:flex; align-items:center; gap:8px; }
+    .feed-entry-title { font-family:Georgia,serif; font-size:1.3rem; font-weight:400; color:var(--ink); line-height:1.35; margin:4px 0 0; }
     .feed-expand-icon { font-size:.7rem; color:var(--muted); flex-shrink:0; padding:4px; }
-    .feed-day { margin-top:20px; padding-top:16px; border-top:1px dashed var(--border); }
-    .feed-day-label { font-family:'Courier New',monospace; font-size:.78rem; font-weight:600; color:var(--muted); margin-bottom:10px; letter-spacing:.05em; text-transform:uppercase; }
-    .feed-day-carousel { margin-bottom:12px; }
-    .feed-entry-more { font-size:.82rem; color:var(--ink); cursor:pointer; background:none; border:none; font-family:inherit; margin-top:16px; padding:8px 0; font-weight:600; }
-    .feed-entry-more:hover { text-decoration:underline; }
+    .feed-day { padding:28px 0; border-bottom:1px solid rgba(0,0,0,.04); }
+    .feed-day:last-child { border-bottom:none; }
+    .feed-day-label { font-family:'Courier New',monospace; font-size:.72rem; color:var(--muted); margin-bottom:16px; letter-spacing:.06em; }
+    .feed-day-carousel { margin-bottom:20px; }
+    .feed-entry-body { font-family:Georgia,serif; font-size:.95rem; color:var(--ink); line-height:2; white-space:pre-line; word-break:keep-all; }
+    .feed-entry-body p { margin-bottom:1.2em; }
+    .feed-entry-body h1,.feed-entry-body h2,.feed-entry-body h3 { margin:1.5em 0 .6em; font-weight:400; }
+    .feed-entry-summary { font-family:Georgia,serif; font-size:.92rem; color:var(--ink-2); line-height:1.8; padding:16px 0; white-space:pre-line; }
+    .feed-entry-more { font-family:'Courier New',monospace; font-size:.78rem; color:var(--muted); cursor:pointer; background:none; border:none; margin-top:8px; padding:12px 0; letter-spacing:.04em; }
+    .feed-entry-more:hover { color:var(--ink); }
     .feed-empty { text-align:center; padding:80px 0; color:var(--muted); font-size:.88rem; line-height:2; }
 
     /* feed carousel */
@@ -355,10 +352,8 @@
       .search-box { width:280px; }
       .trips-section { padding:20px 16px 32px; margin:0 8px 16px; border-radius:12px; }
       .trips-grid { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
-      .editorial-feed { padding:0 8px 40px; }
-      .feed-entry-inner { padding:16px; }
-      .feed-entry-title { font-size:1.05rem; }
-      .feed-entry-photos { grid-template-columns:1fr !important; }
+      .editorial-feed { padding:0 12px 40px; }
+      .feed-entry-title { font-size:1.1rem; }
       .feed-entry { border-radius:12px; }
       .journal-inner { padding:24px 20px; }
       .journal-view-photos { grid-template-columns:1fr; }
@@ -601,39 +596,36 @@
         <div class="feed-header-line"></div>
       </div>
       <div class="feed-entry" v-for="(trip, idx) in tripsWithStory" :key="'feed-'+trip.id">
-        <div class="feed-entry-dot"></div>
         <div class="feed-entry-inner">
-          <!-- 프로젝트 헤더 (클릭으로 접기/펼치기) -->
+          <!-- 여행 헤더 -->
           <div class="feed-entry-header" @click="feedExpanded[trip.id]=!feedExpanded[trip.id]">
             <div>
               <div class="feed-entry-kicker">{{ trip.flag }} {{ trip.destination }} · {{ trip.startDate }}~{{ trip.endDate }}</div>
-              <div class="feed-entry-title" style="margin-bottom:0">{{ trip.name }}</div>
+              <div class="feed-entry-title">{{ trip.name }}</div>
             </div>
-            <span class="feed-expand-icon">{{ feedExpanded[trip.id] ? '▲' : '▼' }}</span>
+            <span class="feed-expand-icon">{{ feedExpanded[trip.id] ? '−' : '+' }}</span>
           </div>
+          <!-- 접힌 상태: 요약 -->
+          <div class="feed-entry-summary" v-if="!feedExpanded[trip.id]">{{ tripSummaryText(trip) }}</div>
           <!-- Day별 일기 (펼쳤을 때) -->
           <template v-if="feedExpanded[trip.id]">
             <template v-for="(entry, dayIdx) in (trip.journal||[])" :key="dayIdx">
               <div class="feed-day" v-if="entry&&(entry.text||(entry.photos&&entry.photos.length))">
-                <div class="feed-day-label">Day {{ dayIdx+1 }} <span style="color:var(--muted);font-weight:400">{{ trip.startDate ? dayDateFromStart(trip.startDate, dayIdx) : '' }}</span></div>
+                <div class="feed-day-label">DAY {{ dayIdx+1 }} {{ trip.startDate ? dayDateFromStart(trip.startDate, dayIdx) : '' }}</div>
                 <!-- 사진 캐러셀 -->
                 <div class="feed-day-carousel" v-if="entry.photos&&entry.photos.length">
-                  <div style="position:relative;overflow:hidden;border-radius:8px">
-                    <img :src="(entry.photos[feedDayPhotoIdx[trip.id+'_'+dayIdx]||0])?.url||(entry.photos[feedDayPhotoIdx[trip.id+'_'+dayIdx]||0])" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block" />
+                  <div style="position:relative;overflow:hidden;border-radius:4px">
+                    <img :src="(entry.photos[feedDayPhotoIdx[trip.id+'_'+dayIdx]||0])?.url||(entry.photos[feedDayPhotoIdx[trip.id+'_'+dayIdx]||0])" style="width:100%;aspect-ratio:3/2;object-fit:cover;display:block" />
                     <button v-if="entry.photos.length>1" class="feed-carousel-btn" style="position:absolute;top:50%;left:8px;transform:translateY(-50%)" @click.stop="feedDayPhotoIdx[trip.id+'_'+dayIdx]=Math.max(0,(feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)-1)">‹</button>
                     <button v-if="entry.photos.length>1" class="feed-carousel-btn" style="position:absolute;top:50%;right:8px;transform:translateY(-50%)" @click.stop="feedDayPhotoIdx[trip.id+'_'+dayIdx]=Math.min(entry.photos.length-1,(feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)+1)">›</button>
-                    <div v-if="entry.photos.length>1" style="text-align:center;padding:6px 0;font-size:.7rem;color:var(--muted)">{{ (feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)+1 }} / {{ entry.photos.length }}</div>
+                    <div v-if="entry.photos.length>1" style="text-align:center;padding:8px 0;font-family:'Courier New',monospace;font-size:.68rem;color:var(--muted)">{{ (feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)+1 }} / {{ entry.photos.length }}</div>
                   </div>
                 </div>
                 <!-- 일기 텍스트 -->
                 <div class="feed-entry-body" v-if="entry.text" v-html="renderMarkdown(entry.text)"></div>
               </div>
             </template>
-            <button class="feed-entry-more" @click="openTripJournal(trip)">📖 여행 상세 보기 →</button>
-          </template>
-          <!-- 접힌 상태: 요약 -->
-          <template v-else>
-            <div style="font-size:.85rem;color:var(--ink-2);margin-top:8px;line-height:1.6">{{ tripSummaryText(trip) }}</div>
+            <button class="feed-entry-more" @click="openTripJournal(trip)">여행 상세 보기 →</button>
           </template>
         </div>
       </div>
