@@ -96,7 +96,7 @@
     .main-hero-divider { width:48px; height:2px; background:var(--ink); margin:40px 0; animation:heroDivGrow .6s ease-out .5s both; position:relative; z-index:1; }
 
     /* trip cards */
-    .trips-section { max-width:1200px; margin:0 auto; padding:32px 48px 48px; background:var(--surface); border-radius:16px; margin-bottom:32px; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+    .trips-section { max-width:1200px; margin:0 auto; padding:32px 48px 48px; background:rgba(255,255,255,.5); border-radius:16px; margin-bottom:32px; backdrop-filter:blur(2px); }
     .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
     .section-title { font-family:Georgia,serif; font-size:1rem; font-weight:400; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
     .trips-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
@@ -126,7 +126,7 @@
     .feed-entry::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:2px; background:var(--border); }
     .feed-entry:last-child::before { bottom:50%; }
     .feed-entry-dot { position:absolute; left:2px; top:24px; width:14px; height:14px; border-radius:50%; background:var(--surface); border:2.5px solid var(--ink); z-index:1; }
-    .feed-entry-inner { background:var(--surface); border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid var(--border); }
+    .feed-entry-inner { background:rgba(255,255,255,.5); border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid rgba(232,232,224,.5); backdrop-filter:blur(2px); }
     .feed-entry-kicker { font-size:.72rem; letter-spacing:.06em; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
     .feed-entry-title { font-family:Georgia,serif; font-size:1.2rem; font-weight:400; color:var(--ink); line-height:1.35; margin-bottom:12px; cursor:pointer; }
     .feed-entry-title:hover { text-decoration:underline; text-underline-offset:3px; }
