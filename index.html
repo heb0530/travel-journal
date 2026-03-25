@@ -1253,13 +1253,13 @@
           <div style="display:flex;flex-wrap:wrap;gap:5px">
             <button v-for="cat in recCategories" :key="cat.val"
               style="padding:5px 12px;border-radius:18px;font-size:.78rem;cursor:pointer;transition:all .15s"
-              :style="recCategory===cat.val?{background:'var(--ink)',color:'#fff',border:'1.5px solid var(--ink)'}:{background:'#fff',color:'var(--ink-2)',border:'1.5px solid var(--border)'}"
-              @click="recCategory=cat.val">
+              :style="recCategory.includes(cat.val)?{background:'var(--ink)',color:'#fff',border:'1.5px solid var(--ink)'}:{background:'#fff',color:'var(--ink-2)',border:'1.5px solid var(--border)'}"
+              @click="toggleRecCategory(cat.val)">
               {{ cat.icon }} {{ cat.label }}
             </button>
           </div>
         </div>
-        <button class="btn btn-save" style="width:100%" @click="fetchRecommendations" :disabled="recLoading||(!recUseMapCenter&&!recRegion.trim())">
+        <button class="btn btn-save" style="width:100%" @click="fetchRecommendations" :disabled="recLoading||(!recUseMapCenter&&!recRegion.trim())||!recCategory.length">
           {{ recLoading ? '검색 중... ('+recProgress+'/'+recTotal+')' : '✨ 추천 장소 검색 (오늘 '+apiRemaining+'회 남음)' }}
         </button>
         <div v-if="recResults.length>0" style="margin-top:14px">
@@ -2116,7 +2116,14 @@ createApp({
 
     // ── 자동 추천 ─────────────────────────────
     const recRegion = ref('')
-    const recCategory = ref('restaurant')
+    const recCategory = ref(['restaurant'])
+    function toggleRecCategory(val) {
+      const arr = [...recCategory.value]
+      const idx = arr.indexOf(val)
+      if (idx >= 0) { if (arr.length > 1) arr.splice(idx, 1) } // 최소 1개
+      else arr.push(val)
+      recCategory.value = arr
+    }
     const recResults = ref([])
     const recLoading = ref(false)
     const recProgress = ref(0)
@@ -2169,12 +2176,14 @@ createApp({
       recSelectedIds.value = new Set()
       recProgress.value = 0
 
-      const catLabel = recCategories.find(c=>c.val===recCategory.value)?.label || ''
+      const cats = recCategory.value
       const service = new google.maps.places.PlacesService(map || document.createElement('div'))
       const allPlaces = []
       const seen = new Set()
+      const totalSteps = cats.length * (recUseMapCenter.value ? 2 : 1) + (recRegion.value.trim() ? cats.length : 0)
+      recTotal.value = totalSteps
 
-      function addResults(results) {
+      function addResults(results, catVal) {
         for (const r of (results||[])) {
           if (!r.geometry) continue
           const key = r.place_id || r.name
@@ -2186,48 +2195,49 @@ createApp({
             lng: r.geometry.location.lng(),
             address: r.formatted_address || r.vicinity || '',
             placeId: r.place_id,
-            category: REC_CAT_MAP[recCategory.value] || '기타',
+            category: REC_CAT_MAP[catVal] || '기타',
             rating: r.rating || null,
             memo: '',
           })
         }
       }
 
-      // 1. 지도 좌표 기반 nearbySearch
-      if (recUseMapCenter.value && map) {
-        recTotal.value = 3
-        const center = map.getCenter()
-        try {
-          const results = await new Promise(resolve => {
-            service.nearbySearch({
-              location: center,
-              radius: 5000,
-              type: recCategory.value,
-              rankBy: google.maps.places.RankBy.PROMINENCE,
-            }, (results, status) => {
-              resolve(status === google.maps.places.PlacesServiceStatus.OK ? results : [])
-            })
-          })
-          addResults(results)
-        } catch(e) { console.warn('nearby error', e) }
-        recProgress.value++
-      } else {
-        recTotal.value = 2
-      }
+      for (const catVal of cats) {
+        const catLabel = recCategories.find(c=>c.val===catVal)?.label || ''
 
-      // 2. 텍스트 검색 (지역명 + 카테고리)
-      const queries = recRegion.value.trim()
-        ? [`${recRegion.value} ${catLabel} 추천`, `${recRegion.value} best ${recCategory.value}`]
-        : []
-      for (const query of queries) {
-        try {
-          const results = await new Promise(resolve => {
-            service.textSearch({ query, type: recCategory.value }, (results, status) => {
-              resolve(status === google.maps.places.PlacesServiceStatus.OK ? results : [])
+        // 1. 지도 좌표 기반 nearbySearch
+        if (recUseMapCenter.value && map) {
+          const center = map.getCenter()
+          try {
+            const results = await new Promise(resolve => {
+              service.nearbySearch({
+                location: center,
+                radius: 5000,
+                type: catVal,
+                rankBy: google.maps.places.RankBy.PROMINENCE,
+              }, (results, status) => {
+                resolve(status === google.maps.places.PlacesServiceStatus.OK ? results : [])
+              })
             })
-          })
-          addResults(results)
-        } catch(e) { console.warn('text search error', e) }
+            addResults(results, catVal)
+          } catch(e) { console.warn('nearby error', e) }
+          recProgress.value++
+        }
+
+        // 2. 텍스트 검색
+        if (recRegion.value.trim()) {
+          const query = `${recRegion.value} ${catLabel} 추천`
+          try {
+            const results = await new Promise(resolve => {
+              service.textSearch({ query, type: catVal }, (results, status) => {
+                resolve(status === google.maps.places.PlacesServiceStatus.OK ? results : [])
+              })
+            })
+            addResults(results, catVal)
+          } catch(e) { console.warn('text search error', e) }
+          recProgress.value++
+        }
+      }
         recProgress.value++
       }
 
@@ -3364,7 +3374,7 @@ createApp({
       sharedTrips,sharedTripRole,canEdit,openSharedTrip,
       publicBundles,bundleSearchQuery,bundleCategoryFilter,bundleCategoryOptions,searchPublicBundles,loadPublicBundle,bundlePlaceCats,
       recRegion,recCategory,recCategories,recResults,recLoading,recProgress,recTotal,recCatEmoji,
-      recUseMapCenter,recSelectedIds,recToggleSelect,recSelectAll,apiRemaining,
+      recUseMapCenter,recSelectedIds,recToggleSelect,recSelectAll,apiRemaining,toggleRecCategory,
       fetchRecommendations,recApplyAsTags,recSaveAsBundle,
       communityTrips,communitySearch,communityLoading,openCommunity,searchCommunityTrips,openCommunityTrip,
       freePageEditing,freePageEditTitle,addFreePage,toggleFreePageEdit,saveFreePageTitle,deleteFreePage,
