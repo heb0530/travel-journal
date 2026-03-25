@@ -99,16 +99,16 @@
     .trips-section { max-width:1200px; margin:0 auto; padding:32px 48px 48px; background:var(--surface); border-radius:16px; margin-bottom:32px; box-shadow:0 1px 4px rgba(0,0,0,.04); }
     .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
     .section-title { font-family:Georgia,serif; font-size:1rem; font-weight:400; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
-    .trips-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; }
+    .trips-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
     .trip-card-wrap { position:relative; }
     .trip-card { background:var(--surface); border-radius:4px; overflow:hidden; cursor:pointer; transition:transform .25s ease,box-shadow .25s ease; border:1px solid var(--border); }
     .trip-card:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,.1); }
-    .trip-card-img { width:100%; height:180px; object-fit:cover; display:block; }
-    .trip-card-img-placeholder { width:100%; height:180px; display:flex; align-items:center; justify-content:center; font-size:3rem; }
-    .trip-card-body { padding:16px 20px 20px; }
-    .trip-card-dest { font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:6px; }
-    .trip-card-name { font-family:Georgia,serif; font-size:1.1rem; font-weight:400; color:var(--ink); margin-bottom:8px; line-height:1.3; }
-    .trip-card-meta { font-size:.75rem; color:var(--muted); }
+    .trip-card-img { width:100%; height:120px; object-fit:cover; display:block; }
+    .trip-card-img-placeholder { width:100%; height:120px; display:flex; align-items:center; justify-content:center; font-size:2.2rem; background-size:cover !important; background-position:center !important; }
+    .trip-card-body { padding:10px 14px 14px; }
+    .trip-card-dest { font-size:.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; }
+    .trip-card-name { font-family:Georgia,serif; font-size:.92rem; font-weight:400; color:var(--ink); margin-bottom:4px; line-height:1.3; }
+    .trip-card-meta { font-size:.68rem; color:var(--muted); }
     .trip-card-edit { position:absolute; top:10px; right:10px; background:rgba(255,255,255,.95); border:none; border-radius:6px; padding:5px 10px; font-size:.72rem; cursor:pointer; opacity:0; transition:opacity .2s; box-shadow:0 2px 8px rgba(0,0,0,.12); }
     .trip-card-wrap:hover .trip-card-edit { opacity:1; }
     .trip-card-new { border:2px dashed var(--border); cursor:pointer; border-radius:4px; transition:all .2s; }
@@ -117,26 +117,25 @@
     .trip-card-new-icon { font-size:1.8rem; }
     .trip-card-new-text { font-size:.82rem; }
 
-    /* editorial feed — blog style */
-    .editorial-feed { max-width:800px; margin:0 auto; padding:0 24px 80px; }
-    .feed-header { margin-bottom:32px; padding-top:32px; }
-    .feed-header-title { font-family:Georgia,serif; font-size:1.1rem; font-weight:400; color:var(--ink); letter-spacing:.02em; }
+    /* editorial feed — diary timeline */
+    .editorial-feed { max-width:720px; margin:0 auto; padding:0 24px 80px; }
+    .feed-header { margin-bottom:28px; padding-top:24px; }
+    .feed-header-title { font-family:Georgia,serif; font-size:1.1rem; font-weight:400; color:var(--ink); }
     .feed-header-line { width:40px; height:2px; background:var(--ink); margin-top:8px; }
-    .feed-entry { background:var(--surface); border-radius:16px; overflow:hidden; margin-bottom:24px; box-shadow:0 1px 6px rgba(0,0,0,.06); transition:box-shadow .2s; display:block; padding:0; border:none; }
-    .feed-entry:hover { box-shadow:0 4px 20px rgba(0,0,0,.1); }
-    .feed-entry-img-wrap { width:100%; aspect-ratio:16/9; overflow:hidden; position:relative; }
-    .feed-entry-img-wrap img { width:100%; height:100%; object-fit:cover; }
-    .feed-entry-placeholder { width:100%; aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; font-size:3.5rem; background-size:cover !important; background-position:center !important; }
-    .feed-entry-content { padding:24px 28px 20px; }
-    .feed-entry-kicker { font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:10px; }
-    .feed-entry-title { font-family:Georgia,serif; font-size:1.4rem; font-weight:400; color:var(--ink); line-height:1.3; margin-bottom:12px; }
-    .feed-entry-body { font-size:.88rem; color:var(--ink-2); line-height:1.8; white-space:pre-line; }
-    .feed-entry-body.collapsed { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
-    .feed-entry-actions { display:flex; align-items:center; gap:12px; margin-top:14px; padding-top:14px; border-top:1px solid #f0f0eb; }
-    .feed-entry-toggle { font-size:.82rem; color:var(--ink-2); cursor:pointer; background:var(--bg); border:1px solid var(--border); border-radius:20px; font-family:inherit; transition:all .15s; padding:7px 18px; font-weight:600; }
-    .feed-entry-toggle:hover { background:var(--ink); color:#fff; border-color:var(--ink); }
-    .feed-entry-cta { font-size:.82rem; font-weight:600; color:var(--ink); cursor:pointer; padding:7px 0; display:inline-block; transition:opacity .15s; background:none; border:none; font-family:inherit; text-decoration:underline; text-underline-offset:3px; }
-    .feed-entry-cta:hover { opacity:.5; }
+    .feed-entry { position:relative; padding:0 0 0 28px; margin-bottom:0; border:none; display:block; }
+    .feed-entry::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:2px; background:var(--border); }
+    .feed-entry:last-child::before { bottom:50%; }
+    .feed-entry-dot { position:absolute; left:2px; top:24px; width:14px; height:14px; border-radius:50%; background:var(--surface); border:2.5px solid var(--ink); z-index:1; }
+    .feed-entry-inner { background:var(--surface); border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid var(--border); }
+    .feed-entry-kicker { font-size:.72rem; letter-spacing:.06em; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+    .feed-entry-title { font-family:Georgia,serif; font-size:1.2rem; font-weight:400; color:var(--ink); line-height:1.35; margin-bottom:12px; cursor:pointer; }
+    .feed-entry-title:hover { text-decoration:underline; text-underline-offset:3px; }
+    .feed-entry-photos { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; border-radius:8px; overflow:hidden; }
+    .feed-entry-photos.single { grid-template-columns:1fr; }
+    .feed-entry-photos img { width:100%; aspect-ratio:4/3; object-fit:cover; cursor:pointer; }
+    .feed-entry-body { font-family:Georgia,serif; font-size:.9rem; color:var(--ink-2); line-height:1.9; white-space:pre-line; }
+    .feed-entry-more { font-size:.82rem; color:var(--muted); cursor:pointer; background:none; border:none; font-family:inherit; margin-top:8px; padding:0; }
+    .feed-entry-more:hover { color:var(--ink); }
     .feed-empty { text-align:center; padding:80px 0; color:var(--muted); font-size:.88rem; line-height:2; }
 
     /* feed carousel */
@@ -341,10 +340,11 @@
       .map-search-overlay { flex-direction:column; align-items:flex-start; }
       .search-box { width:280px; }
       .trips-section { padding:20px 16px 32px; margin:0 8px 16px; border-radius:12px; }
-      .trips-grid { grid-template-columns:1fr 1fr; }
+      .trips-grid { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
       .editorial-feed { padding:0 8px 40px; }
-      .feed-entry-content { padding:16px 18px 14px; }
-      .feed-entry-title { font-size:1.15rem; }
+      .feed-entry-inner { padding:16px; }
+      .feed-entry-title { font-size:1.05rem; }
+      .feed-entry-photos { grid-template-columns:1fr !important; }
       .feed-entry { border-radius:12px; }
       .journal-inner { padding:24px 20px; }
       .journal-view-photos { grid-template-columns:1fr; }
@@ -353,7 +353,7 @@
       .side-panel { width:260px; }
     }
     @media (max-width:480px) {
-      .trips-grid { grid-template-columns:1fr; }
+      .trips-grid { grid-template-columns:1fr 1fr; gap:8px; }
       .detail-topbar { padding:8px 12px; gap:8px; }
       .detail-topbar-title { font-size:.9rem; }
       .detail-topbar-dest { font-size:.68rem; }
@@ -580,29 +580,30 @@
       </div>
     </div>
 
-    <!-- editorial feed — blog cards -->
+    <!-- editorial feed — diary timeline -->
     <div class="editorial-feed" v-if="tripsWithStory.length>0">
       <div class="feed-header">
         <span class="feed-header-title">여행 이야기</span>
         <div class="feed-header-line"></div>
       </div>
       <div class="feed-entry" v-for="(trip, idx) in tripsWithStory" :key="'feed-'+trip.id">
-        <!-- 커버 이미지 -->
-        <div class="feed-entry-img-wrap" v-if="tripAllPhotos(trip).length" @click="openTripJournal(trip)" style="cursor:pointer">
-          <img :src="(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])?.url||(tripAllPhotos(trip)[feedPhotoIdx[trip.id]||0])" />
-          <button class="feed-carousel-btn feed-carousel-prev" v-if="tripAllPhotos(trip).length>1" @click.stop="feedPrev(trip)" style="position:absolute;top:50%;left:10px;transform:translateY(-50%)">‹</button>
-          <button class="feed-carousel-btn feed-carousel-next" v-if="tripAllPhotos(trip).length>1" @click.stop="feedNext(trip)" style="position:absolute;top:50%;right:10px;transform:translateY(-50%)">›</button>
-        </div>
-        <div v-else class="feed-entry-placeholder" :style="themeStyle(trip.theme)" @click="openTripJournal(trip)" style="cursor:pointer">{{ trip.flag }}</div>
-        <!-- 본문 -->
-        <div class="feed-entry-content">
-          <div class="feed-entry-kicker">{{ trip.flag }} {{ trip.destination }} · {{ trip.startDate }}</div>
-          <div class="feed-entry-title">{{ trip.name }}</div>
-          <div class="feed-entry-body" :class="{collapsed:!feedExpanded[trip.id]}">{{ tripFullText(trip) }}</div>
-          <div class="feed-entry-actions">
-            <button class="feed-entry-toggle" v-if="tripFullText(trip).length>80" @click.stop="feedExpanded[trip.id]=!feedExpanded[trip.id]">{{ feedExpanded[trip.id] ? '접기' : '펼치기' }}</button>
-            <button class="feed-entry-cta" @click.stop="openTripJournal(trip)">여행 보러 가기 →</button>
+        <div class="feed-entry-dot"></div>
+        <div class="feed-entry-inner">
+          <div class="feed-entry-kicker">
+            <span>{{ trip.flag }} {{ trip.destination }}</span>
+            <span style="color:var(--border)">·</span>
+            <span>{{ trip.startDate }}</span>
           </div>
+          <div class="feed-entry-title" @click="openTripJournal(trip)">{{ trip.name }}</div>
+          <!-- 사진 (최대 4장) -->
+          <div class="feed-entry-photos" v-if="tripAllPhotos(trip).length"
+            :class="{single:tripAllPhotos(trip).length===1}">
+            <img v-for="(photo,pi) in tripAllPhotos(trip).slice(0,4)" :key="pi"
+              :src="photo.url||photo" @click="openTripJournal(trip)" />
+          </div>
+          <!-- 전체 일기 텍스트 -->
+          <div class="feed-entry-body" v-html="renderMarkdown(tripFullText(trip))"></div>
+          <button class="feed-entry-more" @click="openTripJournal(trip)">여행 보러 가기 →</button>
         </div>
       </div>
     </div>
