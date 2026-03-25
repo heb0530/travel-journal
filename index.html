@@ -11,15 +11,22 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #f5f3ee;
+      --bg: #f2efe8;
       --surface: #fff;
-      --ink: #1a1917;
-      --ink-2: #4a4a45;
-      --muted: #9a9a92;
-      --border: #e8e8e0;
-      --text: #1a1917;
+      --ink: #2c2820;
+      --ink-2: #5a5448;
+      --muted: #a09888;
+      --border: #e0ddd4;
+      --text: #2c2820;
+      --film-warm: sepia(8%) saturate(90%) brightness(98%) contrast(95%);
     }
-    body { font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; overflow-x:hidden; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.09'/%3E%3C/svg%3E"); }
+    body { font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; overflow-x:hidden; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E"); }
+    /* 필름 비네팅 오버레이 */
+    body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:9999; background:radial-gradient(ellipse at center,transparent 65%,rgba(30,25,18,.12) 100%); }
+    /* 사진에 필름 필터 */
+    img:not([src*="google"]):not([src*="gstatic"]) { filter:var(--film-warm); }
+    .trip-card-img, .journal-view-photo, .feed-entry-img-wrap img, .feed-day-carousel img,
+    .community-card-img { filter:var(--film-warm); }
 
     /* ── 로그인 ── */
     .login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); }
@@ -89,8 +96,9 @@
     .main-page::before { content:''; position:fixed; top:-200px; right:-200px; width:900px; height:900px; background:radial-gradient(ellipse at center,rgba(205,185,225,.4) 0%,rgba(200,180,220,.2) 25%,rgba(195,175,215,.08) 50%,transparent 70%); border-radius:50%; pointer-events:none; animation:lilacBreathe 22s ease-in-out infinite; z-index:0; }
     .main-page::after { content:''; position:fixed; top:-100px; right:100px; width:600px; height:600px; background:radial-gradient(ellipse at center,rgba(215,195,235,.25) 0%,rgba(210,190,230,.1) 35%,transparent 65%); border-radius:50%; pointer-events:none; animation:lilacBreathe 30s ease-in-out infinite; z-index:0; }
     .main-hero { padding:100px 48px 0; max-width:1200px; margin:0 auto; position:relative; }
-    .main-hero-light { display:none; }
-    .main-hero-ray3 { display:none; }
+    .main-hero-light { position:fixed; top:-100px; right:-50px; width:500px; height:400px; background:radial-gradient(ellipse,rgba(220,195,150,.18) 0%,transparent 70%); pointer-events:none; z-index:0; animation:filmGlow 20s ease-in-out infinite; }
+    .main-hero-ray3 { position:fixed; bottom:-50px; left:-80px; width:400px; height:350px; background:radial-gradient(ellipse,rgba(180,160,130,.12) 0%,transparent 70%); pointer-events:none; z-index:0; animation:filmGlow 28s ease-in-out infinite reverse; }
+    @keyframes filmGlow { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.1)} }
     .main-hero-kicker { font-size:.72rem; text-transform:uppercase; letter-spacing:.15em; color:var(--muted); margin-bottom:16px; animation:heroFadeUp .8s ease-out both; position:relative; z-index:1; }
     .main-hero-title { font-family:Georgia,'Times New Roman',serif; font-size:3.6rem; font-weight:400; color:var(--ink); line-height:1.1; letter-spacing:-.03em; animation:heroFadeUp .8s ease-out .15s both; position:relative; z-index:1; }
     .main-hero-divider { width:48px; height:2px; background:var(--ink); margin:40px 0; animation:heroDivGrow .6s ease-out .5s both; position:relative; z-index:1; }
@@ -127,7 +135,7 @@
     .feed-entry:last-child::before { bottom:50%; }
     .feed-entry-dot { position:absolute; left:2px; top:24px; width:14px; height:14px; border-radius:50%; background:var(--surface); border:2.5px solid var(--ink); z-index:1; }
     .feed-entry-inner { background:rgba(255,255,255,.5); border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid rgba(232,232,224,.5); backdrop-filter:blur(2px); }
-    .feed-entry-kicker { font-size:.72rem; letter-spacing:.06em; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+    .feed-entry-kicker { font-family:'Courier New',monospace; font-size:.7rem; letter-spacing:.04em; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
     .feed-entry-title { font-family:Georgia,serif; font-size:1.2rem; font-weight:400; color:var(--ink); line-height:1.35; margin-bottom:12px; cursor:pointer; }
     .feed-entry-title:hover { text-decoration:underline; text-underline-offset:3px; }
     .feed-entry-photos { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; border-radius:8px; overflow:hidden; }
@@ -138,7 +146,7 @@
     .feed-entry-header:hover .feed-entry-title { text-decoration:underline; text-underline-offset:3px; }
     .feed-expand-icon { font-size:.7rem; color:var(--muted); flex-shrink:0; padding:4px; }
     .feed-day { margin-top:20px; padding-top:16px; border-top:1px dashed var(--border); }
-    .feed-day-label { font-family:Georgia,serif; font-size:.88rem; font-weight:600; color:var(--ink); margin-bottom:10px; }
+    .feed-day-label { font-family:'Courier New',monospace; font-size:.78rem; font-weight:600; color:var(--muted); margin-bottom:10px; letter-spacing:.05em; text-transform:uppercase; }
     .feed-day-carousel { margin-bottom:12px; }
     .feed-entry-more { font-size:.82rem; color:var(--ink); cursor:pointer; background:none; border:none; font-family:inherit; margin-top:16px; padding:8px 0; font-weight:600; }
     .feed-entry-more:hover { text-decoration:underline; }
