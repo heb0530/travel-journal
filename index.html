@@ -605,20 +605,22 @@
           </div>
           <!-- Day별 일기 (펼쳤을 때) -->
           <template v-if="feedExpanded[trip.id]">
-            <div class="feed-day" v-for="(entry, dayIdx) in (trip.journal||[])" :key="dayIdx" v-if="entry&&(entry.text||(entry.photos&&entry.photos.length))">
-              <div class="feed-day-label">Day {{ dayIdx+1 }} <span v-if="dayDate(dayIdx)" style="color:var(--muted);font-weight:400">{{ trip.startDate ? dayDateFromStart(trip.startDate, dayIdx) : '' }}</span></div>
-              <!-- 사진 캐러셀 -->
-              <div class="feed-day-carousel" v-if="entry.photos&&entry.photos.length">
-                <div class="feed-day-carousel-inner" style="position:relative;overflow:hidden;border-radius:8px">
-                  <img :src="(entry.photos[feedDayPhotoIdx[trip.id+'_'+dayIdx]||0])?.url||(entry.photos[feedDayPhotoIdx[trip.id+'_'+dayIdx]||0])" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block" />
-                  <button v-if="entry.photos.length>1" class="feed-carousel-btn feed-carousel-prev" style="position:absolute;top:50%;left:8px;transform:translateY(-50%)" @click.stop="feedDayPhotoIdx[trip.id+'_'+dayIdx]=Math.max(0,(feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)-1)">‹</button>
-                  <button v-if="entry.photos.length>1" class="feed-carousel-btn feed-carousel-next" style="position:absolute;top:50%;right:8px;transform:translateY(-50%)" @click.stop="feedDayPhotoIdx[trip.id+'_'+dayIdx]=Math.min(entry.photos.length-1,(feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)+1)">›</button>
-                  <div v-if="entry.photos.length>1" style="text-align:center;padding:6px 0;font-size:.7rem;color:var(--muted)">{{ (feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)+1 }} / {{ entry.photos.length }}</div>
+            <template v-for="(entry, dayIdx) in (trip.journal||[])" :key="dayIdx">
+              <div class="feed-day" v-if="entry&&(entry.text||(entry.photos&&entry.photos.length))">
+                <div class="feed-day-label">Day {{ dayIdx+1 }} <span style="color:var(--muted);font-weight:400">{{ trip.startDate ? dayDateFromStart(trip.startDate, dayIdx) : '' }}</span></div>
+                <!-- 사진 캐러셀 -->
+                <div class="feed-day-carousel" v-if="entry.photos&&entry.photos.length">
+                  <div style="position:relative;overflow:hidden;border-radius:8px">
+                    <img :src="(entry.photos[feedDayPhotoIdx[trip.id+'_'+dayIdx]||0])?.url||(entry.photos[feedDayPhotoIdx[trip.id+'_'+dayIdx]||0])" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block" />
+                    <button v-if="entry.photos.length>1" class="feed-carousel-btn" style="position:absolute;top:50%;left:8px;transform:translateY(-50%)" @click.stop="feedDayPhotoIdx[trip.id+'_'+dayIdx]=Math.max(0,(feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)-1)">‹</button>
+                    <button v-if="entry.photos.length>1" class="feed-carousel-btn" style="position:absolute;top:50%;right:8px;transform:translateY(-50%)" @click.stop="feedDayPhotoIdx[trip.id+'_'+dayIdx]=Math.min(entry.photos.length-1,(feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)+1)">›</button>
+                    <div v-if="entry.photos.length>1" style="text-align:center;padding:6px 0;font-size:.7rem;color:var(--muted)">{{ (feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)+1 }} / {{ entry.photos.length }}</div>
+                  </div>
                 </div>
+                <!-- 일기 텍스트 -->
+                <div class="feed-entry-body" v-if="entry.text" v-html="renderMarkdown(entry.text)"></div>
               </div>
-              <!-- 일기 텍스트 -->
-              <div class="feed-entry-body" v-if="entry.text" v-html="renderMarkdown(entry.text)"></div>
-            </div>
+            </template>
             <button class="feed-entry-more" @click="openTripJournal(trip)">📖 여행 상세 보기 →</button>
           </template>
           <!-- 접힌 상태: 요약 -->
