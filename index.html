@@ -686,7 +686,8 @@
       </div>
       <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
         <button class="share-btn" @click="openShareModal" v-if="canEdit">🔗 공유</button>
-        <span v-if="currentTrip.visibility==='public'" style="font-size:.7rem;padding:3px 8px;background:#E8F5E9;color:#2E7D32;border-radius:10px">🌐 전체 공개</span>
+        <span v-if="currentTrip.visibility==='public'" style="font-size:.7rem;padding:3px 8px;background:#E8F5E9;color:#2E7D32;border-radius:10px">🌐 전체 공개 (조회)</span>
+        <span v-if="currentTrip.visibility==='public_edit'" style="font-size:.7rem;padding:3px 8px;background:#FFF3E0;color:#E65100;border-radius:10px">🌐 전체 공개 (편집)</span>
         <span v-if="currentTrip.visibility==='invite'" style="font-size:.7rem;padding:3px 8px;background:#E3F2FD;color:#1565C0;border-radius:10px">👥 초대</span>
         <button class="btn btn-sm" :style="mapTheme==='sketch'?'background:var(--bg);color:var(--ink);border:1px solid var(--border)':'background:var(--ink);color:#fff'" @click="toggleMapTheme" title="지도 테마 변경">{{ mapTheme==='sketch'?'일반 지도':'일러스트' }}</button>
         <button class="btn btn-sm" style="background:var(--bg);color:var(--ink);border:1px solid var(--border)" @click="showImportGuide=true" v-if="canEdit">태그 꾸러미</button>
@@ -1139,9 +1140,18 @@
             <span class="vis-option-icon">🔒</span>
             <div class="vis-option-text"><div class="vis-option-title">나만 보기</div><div class="vis-option-desc">본인만 접근 가능</div></div>
           </div>
-          <div class="vis-option" :class="{active:shareVisibility==='public'}" @click="shareVisibility='public'">
+          <div class="vis-option" :class="{active:shareVisibility==='public'||shareVisibility==='public_edit'}" @click="shareVisibility=shareVisibility==='public_edit'?'public_edit':'public'">
             <span class="vis-option-icon">🌐</span>
-            <div class="vis-option-text"><div class="vis-option-title">전체 공개</div><div class="vis-option-desc">링크가 있는 누구나 읽기 가능</div></div>
+            <div class="vis-option-text" style="flex:1">
+              <div class="vis-option-title">전체 공개</div>
+              <div class="vis-option-desc">링크가 있는 누구나 접근 가능</div>
+            </div>
+            <select v-if="shareVisibility==='public'||shareVisibility==='public_edit'"
+              :value="shareVisibility" @change="shareVisibility=$event.target.value" @click.stop
+              style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:#fff">
+              <option value="public">👁️ 조회만</option>
+              <option value="public_edit">✏️ 편집 가능</option>
+            </select>
           </div>
           <div class="vis-option" :class="{active:shareVisibility==='invite'}" @click="shareVisibility='invite'">
             <span class="vis-option-icon">👥</span>
@@ -1967,6 +1977,8 @@ createApp({
       // 소유자이거나, 공유 모드가 아니면 편집 가능
       if (!sharedTripRole.value) return true
       if (currentTrip.value.user_id === currentUser.value?.id) return true
+      // 전체 공개 편집 모드
+      if (currentTrip.value.visibility === 'public_edit') return true
       return sharedTripRole.value === 'editor'
     })
 
@@ -2061,7 +2073,7 @@ createApp({
       trip.visibility = data.visibility
       trip.owner_name = data.owner_name
       currentTrip.value = trip
-      sharedTripRole.value = 'viewer'
+      sharedTripRole.value = data.visibility === 'public_edit' ? 'editor' : 'viewer'
       detailTab.value = 'map'
       view.value = 'map'
       nextTick(() => { loadMapsApi(() => nextTick(buildMap)) })
@@ -2077,7 +2089,7 @@ createApp({
     async function searchPublicBundles(query) {
       let q = sb.from('saved_bundles')
         .select('*')
-        .eq('visibility', 'public')
+        .in('visibility', ['public','public_edit'])
         .order('use_count', { ascending: false })
         .limit(30)
       if (query) q = q.or(`name.ilike.%${query}%,region.ilike.%${query}%`)
@@ -2268,7 +2280,7 @@ createApp({
     async function searchCommunityTrips() {
       let q = sb.from('trips')
         .select('*, pins(id), journals(id, journal_photos(url, is_thumbnail))')
-        .eq('visibility', 'public')
+        .in('visibility', ['public','public_edit'])
         .order('created_at', { ascending: false })
         .limit(30)
       if (communitySearch.value.trim()) {
