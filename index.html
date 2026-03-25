@@ -127,17 +127,17 @@
 
     /* editorial feed — brunch-style diary */
     .editorial-feed { max-width:640px; margin:0 auto; padding:0 24px 80px; }
-    .feed-header { margin-bottom:32px; padding-top:28px; text-align:center; }
+    .feed-header { margin-bottom:32px; padding-top:28px; }
     .feed-header-title { font-family:Georgia,serif; font-size:1rem; font-weight:400; color:var(--muted); letter-spacing:.1em; }
-    .feed-header-line { width:32px; height:1.5px; background:var(--muted); margin:10px auto 0; }
+    .feed-header-line { width:32px; height:1.5px; background:var(--muted); margin:10px 0 0; }
     .feed-entry { margin-bottom:40px; }
     .feed-entry-inner { padding:0; }
     .feed-entry-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:16px 0 12px; border-bottom:1px solid var(--border); margin-bottom:0; }
     .feed-entry-header:hover { opacity:.7; }
     .feed-entry-kicker { font-family:'Courier New',monospace; font-size:.7rem; letter-spacing:.04em; color:var(--muted); display:flex; align-items:center; gap:8px; }
     .feed-entry-title { font-family:Georgia,serif; font-size:1.3rem; font-weight:400; color:var(--ink); line-height:1.35; margin:4px 0 0; }
-    .feed-expand-icon { font-size:.7rem; color:var(--muted); flex-shrink:0; padding:4px; }
-    .feed-day { padding:28px 0; border-bottom:1px solid rgba(0,0,0,.04); }
+    .feed-expand-icon { font-size:1.4rem; color:var(--muted); flex-shrink:0; padding:4px 8px; font-weight:300; }
+    .feed-day { padding:28px 20px; border-bottom:1px solid rgba(0,0,0,.04); }
     .feed-day:last-child { border-bottom:none; }
     .feed-day-label { font-family:'Courier New',monospace; font-size:.72rem; color:var(--muted); margin-bottom:16px; letter-spacing:.06em; }
     .feed-day-carousel { margin-bottom:20px; }
@@ -2442,6 +2442,10 @@ createApp({
       saveTrips()
     }
     const tripsWithStory = computed(()=>trips.value.filter(t=>tripCoverPhoto(t)||tripFullText(t)).reverse())
+    // 새 여행이 추가되면 기본 펼치기
+    watch(tripsWithStory, (list) => {
+      list.forEach(t=>{ if(feedExpanded.value[t.id]===undefined) feedExpanded.value[t.id]=true })
+    }, { immediate:true })
 
     // Feed carousel & expand state
     const feedPhotoIdx = ref({})
