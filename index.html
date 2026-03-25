@@ -600,10 +600,12 @@
   <!-- ③ 디테일 페이지 -->
   <div class="detail-page" v-if="view==='map' && currentTrip">
     <div class="detail-topbar">
-      <button class="back-btn" @click="view='shelf'">← 뒤로</button>
+      <button class="back-btn" @click="goBack">{{ shareTokenFromURL ? '← 홈' : '← 뒤로' }}</button>
       <div>
         <div class="detail-topbar-title">{{ currentTrip.flag }} {{ currentTrip.name }}</div>
-        <div class="detail-topbar-dest">{{ currentTrip.destination }} · {{ currentTrip.startDate }}~{{ currentTrip.endDate }}</div>
+        <div class="detail-topbar-dest">
+          {{ currentTrip.owner_name ? currentTrip.owner_name+'의 여행 · ' : '' }}{{ currentTrip.destination }} · {{ currentTrip.startDate }}~{{ currentTrip.endDate }}
+        </div>
       </div>
       <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
         <button class="share-btn" @click="openShareModal" v-if="canEdit">🔗 공유</button>
@@ -2400,6 +2402,16 @@ createApp({
       }
     }
 
+    function goBack() {
+      if (shareTokenFromURL) {
+        // 공유 링크로 접속한 경우 → 메인 사이트로 안내
+        window.location.href = window.location.origin
+      } else {
+        view.value = 'shelf'
+        currentTrip.value = null
+        sharedTripRole.value = null
+      }
+    }
     function openTrip(trip) { currentTrip.value=trip; sharedTripRole.value=null; mapFilter.value='all'; mapDayFilter.value=-1; detailTab.value='map'; view.value='map'; nextTick(()=>initMap()) }
     function initMap() { if (!window.google){loadMapsApi(()=>nextTick(buildMap));return}; buildMap() }
     function buildMap() {
@@ -3073,7 +3085,7 @@ createApp({
     }
 
     return {
-      view,currentUser,showUserMenu,isInAppBrowser,mobileSideOpen,signInWithGoogle,signOut,
+      view,currentUser,showUserMenu,isInAppBrowser,mobileSideOpen,shareTokenFromURL,signInWithGoogle,signOut,
       showMigrateModal,migrateStep,migratePercent,migrateStatus,migrateResult,
       localTripCount,localBundleCount,skipMigration,startMigration,finishMigration,
       apiKeyInput,saveApiKey,
@@ -3086,7 +3098,7 @@ createApp({
       recRegion,recCategory,recCategories,recResults,recLoading,recProgress,recTotal,recCatEmoji,
       recUseMapCenter,recSelectedIds,recToggleSelect,recSelectAll,
       fetchRecommendations,recApplyAsTags,recSaveAsBundle,
-      trips,currentTrip,confirmedCount,themeStyle,openTrip,detailTab,
+      trips,currentTrip,confirmedCount,themeStyle,goBack,openTrip,detailTab,
       THEMES,showTripModal,tripModalMode,tripForm,openNewTripModal,openEditTripModal,closeTripModal,saveTripModal,deleteTrip,calcDays,
       mapTheme,toggleMapTheme,showColorPanel,mapFilter,mapDayFilter,setMapFilter,setMapDayFilter,
       sideTab,selectedPinType,days,addDay,deleteDay,dayColor,setDayColor,dayDate,
