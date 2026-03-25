@@ -2238,8 +2238,6 @@ createApp({
           recProgress.value++
         }
       }
-        recProgress.value++
-      }
 
       recResults.value = allPlaces.sort((a,b) => (b.rating||0) - (a.rating||0)).slice(0, 40)
       recSelectedIds.value = new Set(recResults.value.map((_,i)=>i)) // 기본 전체 선택
@@ -2267,7 +2265,8 @@ createApp({
     async function recSaveAsBundle() {
       const selected = recSelectedPlaces()
       if (!selected.length) { alert('장소를 선택해주세요.'); return }
-      const name = `${recRegion.value||currentTrip.value?.destination||''} ${recCategories.find(c=>c.val===recCategory.value)?.label||''}`
+      const catLabels = recCategory.value.map(v=>recCategories.find(c=>c.val===v)?.label||'').filter(Boolean).join('+')
+      const name = `${recRegion.value||currentTrip.value?.destination||''} ${catLabels}`
       const newBundle = await saveBundleToDB(name.trim(), selected, 'public', recRegion.value||currentTrip.value?.destination||'')
       if (newBundle) {
         savedBundles.value.push(newBundle)
