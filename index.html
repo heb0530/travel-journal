@@ -134,8 +134,14 @@
     .feed-entry-photos.single { grid-template-columns:1fr; }
     .feed-entry-photos img { width:100%; aspect-ratio:4/3; object-fit:cover; cursor:pointer; }
     .feed-entry-body { font-family:Georgia,serif; font-size:.9rem; color:var(--ink-2); line-height:1.9; white-space:pre-line; }
-    .feed-entry-more { font-size:.82rem; color:var(--muted); cursor:pointer; background:none; border:none; font-family:inherit; margin-top:8px; padding:0; }
-    .feed-entry-more:hover { color:var(--ink); }
+    .feed-entry-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:4px 0; }
+    .feed-entry-header:hover .feed-entry-title { text-decoration:underline; text-underline-offset:3px; }
+    .feed-expand-icon { font-size:.7rem; color:var(--muted); flex-shrink:0; padding:4px; }
+    .feed-day { margin-top:20px; padding-top:16px; border-top:1px dashed var(--border); }
+    .feed-day-label { font-family:Georgia,serif; font-size:.88rem; font-weight:600; color:var(--ink); margin-bottom:10px; }
+    .feed-day-carousel { margin-bottom:12px; }
+    .feed-entry-more { font-size:.82rem; color:var(--ink); cursor:pointer; background:none; border:none; font-family:inherit; margin-top:16px; padding:8px 0; font-weight:600; }
+    .feed-entry-more:hover { text-decoration:underline; }
     .feed-empty { text-align:center; padding:80px 0; color:var(--muted); font-size:.88rem; line-height:2; }
 
     /* feed carousel */
@@ -580,7 +586,7 @@
       </div>
     </div>
 
-    <!-- editorial feed — diary timeline -->
+    <!-- editorial feed — diary per trip -->
     <div class="editorial-feed" v-if="tripsWithStory.length>0">
       <div class="feed-header">
         <span class="feed-header-title">여행 이야기</span>
@@ -589,21 +595,36 @@
       <div class="feed-entry" v-for="(trip, idx) in tripsWithStory" :key="'feed-'+trip.id">
         <div class="feed-entry-dot"></div>
         <div class="feed-entry-inner">
-          <div class="feed-entry-kicker">
-            <span>{{ trip.flag }} {{ trip.destination }}</span>
-            <span style="color:var(--border)">·</span>
-            <span>{{ trip.startDate }}</span>
+          <!-- 프로젝트 헤더 (클릭으로 접기/펼치기) -->
+          <div class="feed-entry-header" @click="feedExpanded[trip.id]=!feedExpanded[trip.id]">
+            <div>
+              <div class="feed-entry-kicker">{{ trip.flag }} {{ trip.destination }} · {{ trip.startDate }}~{{ trip.endDate }}</div>
+              <div class="feed-entry-title" style="margin-bottom:0">{{ trip.name }}</div>
+            </div>
+            <span class="feed-expand-icon">{{ feedExpanded[trip.id] ? '▲' : '▼' }}</span>
           </div>
-          <div class="feed-entry-title" @click="openTripJournal(trip)">{{ trip.name }}</div>
-          <!-- 사진 (최대 4장) -->
-          <div class="feed-entry-photos" v-if="tripAllPhotos(trip).length"
-            :class="{single:tripAllPhotos(trip).length===1}">
-            <img v-for="(photo,pi) in tripAllPhotos(trip).slice(0,4)" :key="pi"
-              :src="photo.url||photo" @click="openTripJournal(trip)" />
-          </div>
-          <!-- 전체 일기 텍스트 -->
-          <div class="feed-entry-body" v-html="renderMarkdown(tripFullText(trip))"></div>
-          <button class="feed-entry-more" @click="openTripJournal(trip)">여행 보러 가기 →</button>
+          <!-- Day별 일기 (펼쳤을 때) -->
+          <template v-if="feedExpanded[trip.id]">
+            <div class="feed-day" v-for="(entry, dayIdx) in (trip.journal||[])" :key="dayIdx" v-if="entry&&(entry.text||(entry.photos&&entry.photos.length))">
+              <div class="feed-day-label">Day {{ dayIdx+1 }} <span v-if="dayDate(dayIdx)" style="color:var(--muted);font-weight:400">{{ trip.startDate ? dayDateFromStart(trip.startDate, dayIdx) : '' }}</span></div>
+              <!-- 사진 캐러셀 -->
+              <div class="feed-day-carousel" v-if="entry.photos&&entry.photos.length">
+                <div class="feed-day-carousel-inner" style="position:relative;overflow:hidden;border-radius:8px">
+                  <img :src="(entry.photos[feedDayPhotoIdx[trip.id+'_'+dayIdx]||0])?.url||(entry.photos[feedDayPhotoIdx[trip.id+'_'+dayIdx]||0])" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block" />
+                  <button v-if="entry.photos.length>1" class="feed-carousel-btn feed-carousel-prev" style="position:absolute;top:50%;left:8px;transform:translateY(-50%)" @click.stop="feedDayPhotoIdx[trip.id+'_'+dayIdx]=Math.max(0,(feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)-1)">‹</button>
+                  <button v-if="entry.photos.length>1" class="feed-carousel-btn feed-carousel-next" style="position:absolute;top:50%;right:8px;transform:translateY(-50%)" @click.stop="feedDayPhotoIdx[trip.id+'_'+dayIdx]=Math.min(entry.photos.length-1,(feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)+1)">›</button>
+                  <div v-if="entry.photos.length>1" style="text-align:center;padding:6px 0;font-size:.7rem;color:var(--muted)">{{ (feedDayPhotoIdx[trip.id+'_'+dayIdx]||0)+1 }} / {{ entry.photos.length }}</div>
+                </div>
+              </div>
+              <!-- 일기 텍스트 -->
+              <div class="feed-entry-body" v-if="entry.text" v-html="renderMarkdown(entry.text)"></div>
+            </div>
+            <button class="feed-entry-more" @click="openTripJournal(trip)">📖 여행 상세 보기 →</button>
+          </template>
+          <!-- 접힌 상태: 요약 -->
+          <template v-else>
+            <div style="font-size:.85rem;color:var(--ink-2);margin-top:8px;line-height:1.6">{{ tripSummaryText(trip) }}</div>
+          </template>
         </div>
       </div>
     </div>
@@ -2422,6 +2443,13 @@ createApp({
 
     // Feed carousel & expand state
     const feedPhotoIdx = ref({})
+    const feedDayPhotoIdx = ref({})
+    function dayDateFromStart(startDate, dayIdx) {
+      if (!startDate) return ''
+      const d = new Date(startDate)
+      d.setDate(d.getDate() + dayIdx)
+      return (d.getMonth()+1)+'/'+d.getDate()
+    }
     const feedExpanded = ref({})
     function feedPrev(trip) {
       const photos=tripAllPhotos(trip); if(photos.length<=1) return
@@ -3335,7 +3363,7 @@ createApp({
       dragPin,dragOverPin,dragOverDay,startDrag,endDrag,dropOnPin,dropOnDay,
       sidePanel,startSideResize,
       tripCoverPhoto,tripSummaryText,tripAllPhotos,tripFullText,tripsWithStory,setTripThumbnail,
-      feedPhotoIdx,feedExpanded,feedPrev,feedNext,openTripJournal,
+      feedPhotoIdx,feedExpanded,feedPrev,feedNext,feedDayPhotoIdx,dayDateFromStart,openTripJournal,
       journalEditDays,toggleJournalEdit,renderMarkdown,
       getJournalText,setJournalText,getJournalPhotos,pickJournalPhoto,onJournalPhotoSelected,removeJournalPhoto,photoUploading,
       journalPhotoDragIdx,moveJournalPhoto,moveJournalPhotoDir,
